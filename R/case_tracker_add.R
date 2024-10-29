@@ -1,36 +1,54 @@
-#' Add cases to the tracking list
+#' Add cases to the tracking list or initialize case count
 #'
-#' Adds a list of unique case IDs to the tracking list with an initial status,
-#' initializing the tracking list if it doesn’t exist.
+#' Adds cases to the tracking list with an initial status of "active", or
+#' initializes the case count with a specified count value at the start
+#' of the pipeline.
 #'
-#' @param cases Character vector of unique case IDs or a data frame with a
-#'   `case_id` column.
-#' @param initial_status Character. The initial status for new cases
-#'   (default is `"active"`).
+#' @param cases A character vector of unique case IDs if `type = "case_list"`,
+#'   or an integer case count if `type = "case_count"`.
+#' @param type Character. Indicates whether to update `"case_list"` (default)
+#'   or `"case_count"`.
 #'
-#' @return None. Updates the tracking list in the package environment.
+#' @return None. Updates the tracking list or initializes the case count.
 #' @export
-case_tracker_add <- function(cases, initial_status = "active") {
-  # Initialize the tracking list if it doesn't already exist
-  if (is.null(.tracking_env$tracking_list)) {
-    .tracking_env$tracking_list <- data.frame(
-      case_id = character(),
-      status = character(),
-      stringsAsFactors = FALSE
-    )
-  }
-
-  # Ensure cases is a character vector; if data frame, assume `case_id` column
-  if (is.data.frame(cases)) {
-    if (!"case_id" %in% names(cases)) {
-      stop("Data frame must contain a 'case_id' column.")
+case_tracker_add <- function(cases, type = "case_list") {
+  if (type == "case_list") {
+    # Initialize tracking_list if not already initialized
+    if (is.null(.tracking_env$tracking_list)) {
+      .tracking_env$tracking_list <- data.frame(case_id = character(),
+                                                status = character(),
+                                                stringsAsFactors = FALSE)
     }
-    cases <- as.character(cases$case_id)
-  }
 
-  # Add new cases to the tracking list
-  new_entries <- data.frame(case_id = cases,
-                            status = initial_status,
+    # Ensure cases is a character vector
+    if (!is.character(cases)) {
+      stop("For 'case_list', cases should be a character vector of case IDs.")
+    }
+
+    # Add cases to tracking list with status "active"
+    new_entries <- data.frame(case_id = cases, status = "active",
+                              stringsAsFactors = FALSE)
+    .tracking_env$tracking_list <- rbind(.tracking_env$tracking_list,
+                                         new_entries)
+  } else if (type == "case_count") {
+    # Initialize tracking_count if not already initialized
+    if (is.null(.tracking_env$tracking_count)) {
+      .tracking_env$tracking_count <- data.frame(case_count = integer(),
+                                                 status = character(),
+                                                 stringsAsFactors = FALSE)
+    }
+
+    # Ensure cases is an integer for case_count
+    if (!is.numeric(cases) || length(cases) != 1) {
+      stop("For 'case_count', cases should be a single integer representing the count.")
+    }
+
+    # Add the initial count to tracking count with status "initial import"
+    new_entry <- data.frame(case_count = cases, status = "initial import",
                             stringsAsFactors = FALSE)
-  .tracking_env$tracking_list <- rbind(.tracking_env$tracking_list, new_entries)
+    .tracking_env$tracking_count <- rbind(.tracking_env$tracking_count,
+                                          new_entry)
+  } else {
+    stop("Invalid type specified. Use 'case_list' or 'case_count'.")
+  }
 }

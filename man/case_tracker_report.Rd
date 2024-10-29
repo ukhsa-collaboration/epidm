@@ -2,13 +2,18 @@
 % Please edit documentation in R/case_tracker_report.R
 \name{case_tracker_report}
 \alias{case_tracker_report}
-\title{Report the current tracking list}
+\title{Report the current tracking list or case count}
 \usage{
-case_tracker_report()
+case_tracker_report(type = "case_list")
+}
+\arguments{
+\item{type}{Character. Indicates whether to return \code{"case_list"} (default)
+or \code{"case_count"}.}
 }
 \value{
-Data frame of the tracking list with columns \code{case_id} and \code{status}.
+Data frame of the tracking list or case count.
 }
 \description{
-Returns the tracking list with case IDs and their current statuses.
+Returns the tracking list with case IDs and their current statuses or the
+case count at different stages in the pipeline.
 }

@@ -2,20 +2,22 @@
 % Please edit documentation in R/case_tracker_update.R
 \name{case_tracker_update}
 \alias{case_tracker_update}
-\title{Update the status of specified cases in the tracking list}
+\title{Update the case status based on the current case list at a checkpoint}
 \usage{
-case_tracker_update(cases, new_status)
+case_tracker_update(cases, checkpoint, type = "case_list")
 }
 \arguments{
-\item{cases}{Character vector of case IDs or data frame with a \code{case_id}
-column.}
+\item{cases}{A character vector of the current case IDs still in the pipeline.}
 
-\item{new_status}{Character. Status message indicating the new state
-or reason for exclusion.}
+\item{checkpoint}{Character. The name of the checkpoint in the data pipeline.}
+
+\item{type}{Character. Indicates whether to update \code{"case_list"} (default)
+or \code{"case_count"}.}
 }
 \value{
-None. Updates the status of specified cases in the tracking list.
+None. Updates the status of cases to "active" or "Dropped at \if{html}{\out{<checkpoint>}}".
 }
 \description{
-Updates the status of cases in the tracking list by their \code{case_id}.
+Updates the case status in the tracking list based on the provided list of
+current case IDs at a specific checkpoint in the pipeline.
 }

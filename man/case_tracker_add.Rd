@@ -2,21 +2,22 @@
 % Please edit documentation in R/case_tracker_add.R
 \name{case_tracker_add}
 \alias{case_tracker_add}
-\title{Add cases to the tracking list}
+\title{Add cases to the tracking list or initialize case count}
 \usage{
-case_tracker_add(cases, initial_status = "active")
+case_tracker_add(cases, type = "case_list")
 }
 \arguments{
-\item{cases}{Character vector of unique case IDs or a data frame with a
-\code{case_id} column.}
+\item{cases}{A character vector of unique case IDs if \code{type = "case_list"},
+or an integer case count if \code{type = "case_count"}.}
 
-\item{initial_status}{Character. The initial status for new cases
-(default is \code{"active"}).}
+\item{type}{Character. Indicates whether to update \code{"case_list"} (default)
+or \code{"case_count"}.}
 }
 \value{
-None. Updates the tracking list in the package environment.
+None. Updates the tracking list or initializes the case count.
 }
 \description{
-Adds a list of unique case IDs to the tracking list with an initial status,
-initializing the tracking list if it doesn’t exist.
+Adds cases to the tracking list with an initial status of "active", or
+initializes the case count with a specified count value at the start
+of the pipeline.
 }

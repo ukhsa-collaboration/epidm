@@ -2,18 +2,20 @@
 % Please edit documentation in R/case_tracker_save.R
 \name{case_tracker_save}
 \alias{case_tracker_save}
-\title{Save the tracking list to a CSV file}
+\title{Save the tracking list or case count to a CSV file}
 \usage{
-case_tracker_save(file_path)
+case_tracker_save(file_path, type = "case_list")
 }
 \arguments{
-\item{file_path}{Character. File path where the tracking list CSV should
-be saved.}
+\item{file_path}{Character. File path where the CSV should be saved.}
+
+\item{type}{Character. Indicates whether to save \code{"case_list"} (default)
+or \code{"case_count"}.}
 }
 \value{
-None. Saves the tracking list to a CSV file at the specified
-\code{file_path}.
+None. Saves the tracking list or case count to a CSV file.
 }
 \description{
-Saves the current tracking list to a specified file path as a CSV file.
+Saves the current tracking list or case count to a specified file path as a
+CSV file.
 }
