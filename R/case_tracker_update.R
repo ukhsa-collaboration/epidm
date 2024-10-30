@@ -8,7 +8,7 @@
 #' @param type Character. Indicates whether to update `"case_list"` (default)
 #'   or `"case_count"`.
 #'
-#' @return None. Updates the status of cases to "active" or "Dropped at <checkpoint>".
+#' @return None. Updates the status of cases to the specified checkpoint or marks cases as dropped.
 #' @export
 case_tracker_update <- function(cases, checkpoint, type = "case_list") {
   if (type == "case_list") {
@@ -22,38 +22,39 @@ case_tracker_update <- function(cases, checkpoint, type = "case_list") {
       stop("For 'case_list', cases should be a character vector of current case IDs.")
     }
 
-    # Initialize last_status in the environment if not set
-    if (is.null(.tracking_env$last_status)) {
-      .tracking_env$last_status <- "active"
-    }
-
     # Get all previously tracked cases
     previous_cases <- .tracking_env$tracking_list$case_id
 
     # Identify removed cases by comparing previous and current lists
     removed_cases <- setdiff(previous_cases, cases)
 
-    # Warning if none of the provided cases match any in tracking_list
-    if (length(intersect(previous_cases, cases)) == 0) {
-      warning("None of the specified cases were found in the tracking list.")
-    }
+    # Set a drop message for cases removed at this checkpoint
+    drop_message <- paste("Dropped at", checkpoint)
 
     # Update status to "Dropped at <checkpoint>" for cases removed at this checkpoint
-    drop_message <- paste("Dropped at", checkpoint)
     for (case_id in removed_cases) {
-      # Only update if the status is still "active" (i.e., it hasn't been dropped before)
       current_status <- .tracking_env$tracking_list$status[.tracking_env$tracking_list$case_id == case_id]
-      if (current_status == "active") {
+
+      # Update only if the current status is not already marked as dropped
+      if (!grepl("Dropped at", current_status)) {
         .tracking_env$tracking_list$status[.tracking_env$tracking_list$case_id == case_id] <- drop_message
       }
     }
 
-    # Update the status of remaining cases to "active"
+    # Update the status of remaining cases to the checkpoint name
     active_indices <- which(.tracking_env$tracking_list$case_id %in% cases)
-    .tracking_env$tracking_list$status[active_indices] <- "active"
+    .tracking_env$tracking_list$status[active_indices] <- checkpoint
 
-    # Update the last status message to the checkpoint name (for readability in debugging)
-    .tracking_env$last_status <- checkpoint
+    # Add any cases that are not already in tracking_list
+    new_cases <- cases[!cases %in% previous_cases]
+    if (length(new_cases) > 0) {
+      new_entries <- data.frame(
+        case_id = new_cases,
+        status = checkpoint,
+        stringsAsFactors = FALSE
+      )
+      .tracking_env$tracking_list <- rbind(.tracking_env$tracking_list, new_entries)
+    }
   } else if (type == "case_count") {
     # Check that tracking_count exists
     if (is.null(.tracking_env$tracking_count)) {
