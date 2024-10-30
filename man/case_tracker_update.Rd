@@ -15,7 +15,7 @@ case_tracker_update(cases, checkpoint, type = "case_list")
 or \code{"case_count"}.}
 }
 \value{
-None. Updates the status of cases to "active" or "Dropped at \if{html}{\out{<checkpoint>}}".
+None. Updates the status of cases to the specified checkpoint or marks cases as dropped.
 }
 \description{
 Updates the case status in the tracking list based on the provided list of

@@ -2,13 +2,15 @@
 % Please edit documentation in R/case_tracker_add.R
 \name{case_tracker_add}
 \alias{case_tracker_add}
-\title{Add cases to the tracking list or initialize case count}
+\title{Add or initialize cases in the tracking list or initialize case count}
 \usage{
-case_tracker_add(cases, type = "case_list")
+case_tracker_add(cases, status = "initial", type = "case_list")
 }
 \arguments{
 \item{cases}{A character vector of unique case IDs if \code{type = "case_list"},
 or an integer case count if \code{type = "case_count"}.}
+
+\item{status}{Character. The status to assign to new cases (default: "initial").}
 
 \item{type}{Character. Indicates whether to update \code{"case_list"} (default)
 or \code{"case_count"}.}
@@ -17,7 +19,7 @@ or \code{"case_count"}.}
 None. Updates the tracking list or initializes the case count.
 }
 \description{
-Adds cases to the tracking list with an initial status of "active", or
+Adds cases to the tracking list with a user-defined initial status, or
 initializes the case count with a specified count value at the start
-of the pipeline.
+of the pipeline. This function can also be used to add additional cases later.
 }
