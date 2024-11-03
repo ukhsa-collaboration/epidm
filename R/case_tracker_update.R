@@ -1,16 +1,23 @@
 #' Update the case status based on the current case list at a checkpoint
 #'
 #' Updates the case status in the tracking list based on the provided list of
-#' current case IDs at a specific checkpoint in the pipeline.
+#' current case IDs at a specific checkpoint in the pipeline. Only cases that
+#' are missing from the current list will be marked as dropped, while all
+#' other cases retain their specified status.
 #'
 #' @param cases A character vector of the current case IDs still in the pipeline.
 #' @param checkpoint Character. The name of the checkpoint in the data pipeline.
 #' @param type Character. Indicates whether to update `"case_list"` (default)
 #'   or `"case_count"`.
+#' @param active_status Character. The status to assign to cases that remain in the pipeline at this checkpoint.
+#'   Defaults to "active".
 #'
-#' @return None. Updates the status of cases to the specified checkpoint or marks cases as dropped.
+#' @return None. Updates the status of cases that are dropped at this checkpoint.
 #' @export
-case_tracker_update <- function(cases, checkpoint, type = "case_list") {
+case_tracker_update <- function(cases,
+                                checkpoint,
+                                type = "case_list",
+                                active_status = checkpoint) {
   if (type == "case_list") {
     # Check that tracking_list exists
     if (is.null(.tracking_env$tracking_list)) {
@@ -22,31 +29,31 @@ case_tracker_update <- function(cases, checkpoint, type = "case_list") {
       stop("For 'case_list', cases should be a character vector of current case IDs.")
     }
 
-    # Get all previously tracked cases
+    # Identify previous cases in the tracking list
     previous_cases <- .tracking_env$tracking_list$case_id
 
-    # Identify removed cases by comparing previous and current lists
-    removed_cases <- setdiff(previous_cases, cases)
-
-    # Set a drop message for cases removed at this checkpoint
+    # 1. Mark dropped cases (present in previous_cases but not in cases)
+    dropped_cases <- setdiff(previous_cases, cases)
     drop_message <- paste("Dropped at", checkpoint)
-
-    # Update status to "Dropped at <checkpoint>" for cases removed at this checkpoint
-    for (case_id in removed_cases) {
-      current_status <- .tracking_env$tracking_list$status[.tracking_env$tracking_list$case_id == case_id]
-
-      # Update only if the current status is not already marked as dropped
-      if (!grepl("Dropped at", current_status)) {
-        .tracking_env$tracking_list$status[.tracking_env$tracking_list$case_id == case_id] <- drop_message
+    if (length(dropped_cases) > 0) {
+      for (case_id in dropped_cases) {
+        # Only mark as dropped if no previous drop message exists
+        current_status <- .tracking_env$tracking_list$status[.tracking_env$tracking_list$case_id == case_id]
+        if (!grepl("^Dropped at", current_status)) {
+          # Prevent overwriting previous drop statuses
+          .tracking_env$tracking_list$status[.tracking_env$tracking_list$case_id == case_id] <- drop_message
+        }
       }
     }
 
-    # Update the status of remaining cases to the checkpoint name
-    active_indices <- which(.tracking_env$tracking_list$case_id %in% cases)
-    .tracking_env$tracking_list$status[active_indices] <- checkpoint
+    # 2. Set status of remaining cases to the specified active_status (e.g., checkpoint)
+    active_cases <- intersect(previous_cases, cases)
+    if (length(active_cases) > 0) {
+      .tracking_env$tracking_list$status[.tracking_env$tracking_list$case_id %in% active_cases] <- active_status
+    }
 
-    # Add any cases that are not already in tracking_list
-    new_cases <- cases[!cases %in% previous_cases]
+    # 3. Add new cases (present in cases but not in previous_cases) with the checkpoint status
+    new_cases <- setdiff(cases, previous_cases)
     if (length(new_cases) > 0) {
       new_entries <- data.frame(
         case_id = new_cases,
@@ -55,13 +62,14 @@ case_tracker_update <- function(cases, checkpoint, type = "case_list") {
       )
       .tracking_env$tracking_list <- rbind(.tracking_env$tracking_list, new_entries)
     }
+
   } else if (type == "case_count") {
     # Check that tracking_count exists
     if (is.null(.tracking_env$tracking_count)) {
       stop("Tracking count not initialized. Use case_tracker_add() to initialize.")
     }
 
-    # Add the new case count to the tracking count with the checkpoint name
+    # Log the case count with the checkpoint name
     new_entry <- data.frame(
       case_count = cases,
       status = checkpoint,
