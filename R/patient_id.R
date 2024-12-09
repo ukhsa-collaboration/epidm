@@ -485,11 +485,11 @@ uk_patient_id <- function(data,
   stage(stage = 6,
         required = c('surname',
                      'date_of_birth'),
-        validation = c('!tmp.valid.nhs',
+        validation = c(
                        'tmp.valid.n2',
                        'tmp.valid.dob'),
         group = c(id$date_of_birth,
-                  namecols))
+                  id$surname))
 
   ## S7: SEX + FULL NAME ######################################################
 
@@ -512,8 +512,7 @@ uk_patient_id <- function(data,
                      'surname'),
         validation = c('tmp.valid.sex',
                        'tmp.valid.dob',
-                       'tmp.valid.n2',
-                       '!tmp.valid.nhs'),
+                       'tmp.valid.n2'),
         group = c(id$sex_mfu,
                   'tmp.fuzz.ym',
                   tmp.fuzz.n))
