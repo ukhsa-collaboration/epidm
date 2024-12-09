@@ -11,6 +11,7 @@
 #'  These are commonly used with inpatient HES/SUS data to group spells with
 #'  defined start and end dates,  or to group positive specimen tests,
 #'  based on specimen dates together into infection episodes.
+#'  
 #'
 #' @import data.table
 #'
@@ -24,7 +25,14 @@
 #' @param window an integer representing a time window in days which will be
 #'   applied to the start date for grouping *events*
 #' @param window_type character, to determine if a 'rolling' or 'static'
-#'   grouping method should be used when grouping *events*
+#'   grouping method should be used when grouping *events*.
+#'   A *'static'* window will identify the first event, and all records X days
+#'   from that event will be attributed to the same episode. Eg. in a 14 day
+#'   window, if first event is on 01 Mar, and events on day 7 Mar and 14 Mar will be 
+#'   grouped, but an event starting 15 Mar days after will start a new episode.
+#'   A *'rolling'* window resets the day counter with each new event. Eg. 
+#'   Events on 01 Mar, 07 Mar, 14 Mar and 15 Mar are all included in a single episode, 
+#'   as will any additional events up until the 29 Mar (assuming a 14-day window).
 #'
 #' @param indx_varname a character string to set variable name for the
 #'   index column which provides a grouping key; default is indx
