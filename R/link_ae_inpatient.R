@@ -325,6 +325,24 @@ link_ae_inpatient <- function(
     ),
     .forceCopy = FALSE) {
 
+
+  # Define required fields
+  required_ae <- c("data", "nhs_number", "hospital_number", "patient_dob", "org_code", "arrival_date", "departure_date")
+  required_inp <- c("data", "nhs_number", "hospital_number", "patient_dob", "org_code", "spell_id", "spell_start_date")
+
+  # Check ae fields
+  missing_ae <- setdiff(required_ae, names(ae))
+  if (length(missing_ae) > 0) {
+    stop(paste("Missing required fields in 'ae':", paste(missing_ae, collapse = ", ")))
+  }
+
+  # Check inp fields
+  missing_inp <- setdiff(required_inp, names(inp))
+  if (length(missing_inp) > 0) {
+    stop(paste("Missing required fields in 'inp':", paste(missing_inp, collapse = ", ")))
+  }
+
+
   if (.forceCopy) {
     inp$data <- data.table::copy(inp$data)
     ae$data <- data.table::copy(ae$data)
@@ -513,22 +531,26 @@ link_ae_inpatient <- function(
   ## if you want to keep a uid column
   cols <- as.vector(unlist(lapply(ae[c(2:length(ae))],`[[`,1)))
 
-  if(exists('record_id',where=ae) & exists('record_id',where=inp)){
-    if(ae$record_id == inp$record_id){
+  if (exists('record_id',where=ae)) {
 
-      names(link) <- gsub(paste0(ae$record_id,'.ae'),
-                          paste0(ae$record_id,'_ae'),
-                          names(link))
+    names(link) <- gsub(paste0("^", ae$record_id, "(\\.ae)?$"),
+                        paste0(ae$record_id, "_ae"),
+                        names(link))
 
-      names(link) <- gsub(paste0(ae$record_id,'.inp'),
-                          paste0(ae$record_id,'_inp'),
-                          names(link))
 
-      cols <- gsub(paste0('^',ae$record_id), paste0(ae$record_id,"_ae"), cols)
-      cols <- c(cols, paste0(inp$record_id,"_inp"))
+    cols <- gsub(paste0('^',ae$record_id), paste0(ae$record_id,"_ae"), cols)
 
-    }
   }
+
+  if (exists('record_id',where=inp)) {
+
+    names(link) <- gsub(paste0("^", inp$record_id, "(\\.inp)?$"),
+                        paste0(inp$record_id, "_inp"),
+                        names(link))
+    cols <- c(cols, paste0(inp$record_id, "_inp"))
+
+  }
+
 
   ## capture and delete extra cols
   rmcols <- c(
