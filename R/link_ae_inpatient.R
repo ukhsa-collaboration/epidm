@@ -531,12 +531,14 @@ link_ae_inpatient <- function(
   ## if you want to keep a uid column
   cols <- as.vector(unlist(lapply(ae[c(2:length(ae))],`[[`,1)))
 
-  if (exists('record_id',where=ae)) {
+  if (exists("record_id", where = ae)) {
 
-    names(link) <- gsub(paste0("^", ae$record_id, "(\\.ae)?$"),
-                        paste0(ae$record_id, "_ae"),
-                        names(link))
-
+    names(link) <- sub(
+      pattern = paste0('^', ae$record_id, '(?:\\.ae)?$'),
+      replacement = paste0(ae$record_id, "_ae"),
+      x = names(link),
+      perl = TRUE
+    )
 
     cols <- gsub(paste0('^',ae$record_id), paste0(ae$record_id,"_ae"), cols)
 
@@ -544,9 +546,15 @@ link_ae_inpatient <- function(
 
   if (exists('record_id',where=inp)) {
 
-    names(link) <- gsub(paste0("^", inp$record_id, "(\\.inp)?$"),
-                        paste0(inp$record_id, "_inp"),
-                        names(link))
+
+    names(link) <- sub(
+      pattern = paste0('^', inp$record_id, '(?:\\.inp)?$'),
+      replacement = paste0(inp$record_id, "_inp"),
+      x = names(link),
+      perl = TRUE
+    )
+
+
     cols <- c(cols, paste0(inp$record_id, "_inp"))
 
   }
