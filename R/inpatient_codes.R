@@ -4,23 +4,33 @@
 #' `r lifecycle::badge('experimental')`
 #'
 #'
-#' When HES/SUS ICD/OPCS codes are provided in wide format
-#'   you may want to clean them up into long for easier analysis.
-#'   This function helps by reshaping long as a separate table.
-#'   Ensuring they're separate allows you to retain source data, and aggregate
-#'   appropriately later.
+#' Converts inpatient episode data (HES/SUS/OPCD) from wide format (multiple diagnosis or procedure columns)
+#' into a long format for easier analysis. Handles ICD-9, ICD-10, and OPCS codes, optionally
+#' pairing procedure codes with their dates.
+#'
+#' @details
+#' * For `type = "icd9"` or `"icd10"`, only diagnosis code columns are reshaped.
+#' * For `type = "opcs"`, both procedure codes and dates are reshaped in paired order.
+#' * All codes are truncated to the first 4 characters (subcodes removed).
 #'
 #' @import data.table
 #'
 #'
-#' @param x a data.frame or data.table containing inpatient data
-#' @param field_strings a vector or string containing the regex for the the columns
-#' @param patient_id_vars a vector containing colnames used to identify a patient episode or spell
-#' @param type a string to denote if the codes are diagnostic or procedural
-#' @param .forceCopy default FALSE; TRUE will force data.table to take a copy
+#' @param x A `data.frame` or `data.table` containing inpatient data. Must have ≥1 row
+#' @param field_strings Character vector of regex patterns used to select columns:
+  #'   * For ICD types: **one** pattern for diagnosis code columns.
+  #'   * For OPCS: **two** patterns—first for procedure codes, second for procedure dates.
+
+#' @param patient_id_vars Character vector of column names that uniquely identify a patient episode or spell. All must exist in `x`.
+#' @param type a string to denote if the codes are diagnostic or procedural. One of `"icd9"`, `"icd10"`, or `"opcs"`.
+#' @param .forceCopy Logical. Default is FALSE; TRUE will force data.table to take a copy
 #'   instead of editing the data without reference
 #'
-#' @return a separate table with codes and id in long form
+#' @return y
+#' A `data.table` in long format:
+  #'   * For ICD types: columns include `patient_id_vars`, `order`, `order_n`, and the code column named by `type`.
+  #'   * For OPCS: columns include `patient_id_vars`, `order_n`, `date`, and the code column named by `type`.
+
 #'
 #' @examples
 #' inpatient_test <- data.frame(
@@ -186,6 +196,92 @@ inpatient_codes <- function(x,
                             patient_id_vars,
                             type = c('icd9','icd10','opcs'),
                             .forceCopy=FALSE) {
+
+
+  ## Error handling
+
+  # type
+  if (missing(type) || length(type) == 0L) {
+    stop("`type` must be one of 'icd9', 'icd10', or 'opcs'.", call. = FALSE)
+  }
+  type <- tolower(type)
+  type <- match.arg(type, c('icd9', 'icd10', 'opcs'))
+
+  # x
+  if (!inherits(x, c("data.table", "data.frame"))) {
+    stop("`x` must be a data.frame or data.table.", call. = FALSE)
+  }
+  if (nrow(x) == 0L) {
+    stop("`x` has 0 rows; nothing to process.", call. = FALSE)
+  }
+
+  # patient_id_vars
+  if (missing(patient_id_vars) || !is.character(patient_id_vars) || length(patient_id_vars) == 0L) {
+    stop("`patient_id_vars` must be a non-empty character vector of column names.", call. = FALSE)
+  }
+  if (anyNA(patient_id_vars) || any(trimws(patient_id_vars) == "")) {
+    stop("`patient_id_vars` contains NA/empty elements.", call. = FALSE)
+  }
+  missing_ids <- setdiff(patient_id_vars, names(x))
+  if (length(missing_ids)) {
+    stop("`patient_id_vars` not found in `x`: ", paste(missing_ids, collapse = ", "), call. = FALSE)
+  }
+
+  # field_strings
+  if (missing(field_strings) || !is.character(field_strings) || length(field_strings) == 0L) {
+    stop("`field_strings` must be a non-empty character vector.", call. = FALSE)
+  }
+  if (type %in% c("icd9","icd10") && length(field_strings) != 1L) {
+    warning("For type '", type, "' only the first element of `field_strings` will be used.")
+    field_strings <- field_strings[1L]
+  }
+  if (type == "opcs" && length(field_strings) < 2L) {
+    stop("For type 'opcs', `field_strings` must contain TWO patterns: one for codes and one for dates.",
+         call. = FALSE)
+  }
+
+  # .forceCopy
+  if (!is.logical(.forceCopy) || length(.forceCopy) != 1L || is.na(.forceCopy)) {
+    stop("`.forceCopy` must be a single TRUE/FALSE.", call. = FALSE)
+  }
+
+  ## ---- Prepare x as data.table ----
+  if (.forceCopy) {
+    x <- data.table::as.data.table(data.table::copy(x))
+  } else {
+    data.table::setDT(x)
+  }
+
+  ## ---- NSE bindings for R CMD check ----
+  order <- order_n <- date <- NULL
+
+
+  ## ---- Select columns according to type ----
+  if (type %in% c("icd9","icd10")) {
+    fields <- grep(field_strings[1], names(x), ignore.case = TRUE, value = TRUE)
+    if (length(fields) == 0L) {
+      stop("No columns in `x` matched the pattern `field_strings[1]` ('",
+           field_strings[1], "').", call. = FALSE)
+    }
+    sel <- unique(c(patient_id_vars, fields))
+  } else { # type == "opcs"
+    fields <- grep(field_strings[1], names(x), ignore.case = TRUE, value = TRUE)
+    dates  <- grep(field_strings[2], names(x), ignore.case = TRUE, value = TRUE)
+    if (length(fields) == 0L) {
+      stop("No procedure CODE columns matched pattern '", field_strings[1], "'.", call. = FALSE)
+    }
+    if (length(dates) == 0L) {
+      stop("No procedure DATE columns matched pattern '", field_strings[2], "'.", call. = FALSE)
+    }
+    if (length(fields) != length(dates)) {
+      stop("For 'opcs', the number of code columns (", length(fields),
+           ") must equal the number of date columns (", length(dates), "). ",
+           "Please ensure patterns select paired columns (e.g., *_code_1 with *_date_1).",
+           call. = FALSE)
+    }
+    sel <- unique(c(patient_id_vars, fields, dates))
+  }
+
 
   ## convert object if its not already
   if(.forceCopy) {
