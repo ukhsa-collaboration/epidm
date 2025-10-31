@@ -251,10 +251,6 @@ inpatient_codes <- function(x,
     data.table::setDT(x)
   }
 
-  ## ---- NSE bindings for R CMD check ----
-  order <- order_n <- date <- NULL
-
-
   ## ---- Select columns according to type ----
   if (type %in% c("icd9","icd10")) {
     fields <- grep(field_strings[1], names(x), ignore.case = TRUE, value = TRUE)
@@ -289,19 +285,14 @@ inpatient_codes <- function(x,
     data.table::setDT(x)
   }
 
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # order_n <- NULL
-
-  ## capture the fields of interest
-  ## icd just have the codes
+  ## Capture the fields of interest
+  ## WHEN icd is selected, the df will just have the codes
   if(type %in% c('icd9','icd10')){
     fields <- grep(field_strings[1],colnames(x),ignore.case=TRUE,value=TRUE)
     sel <- c(patient_id_vars,fields)
   }
 
-  ## opcs have a date and a procedural code
+  ## WHEN opcs is selected the df will have a date and a procedural code
   if(type=='opcs'){
     fields <- grep(field_strings[1],colnames(x),ignore.case=TRUE,value=TRUE)
     dates <- grep(field_strings[2],colnames(x),ignore.case=TRUE,value=TRUE)
@@ -309,12 +300,12 @@ inpatient_codes <- function(x,
   }
 
 
-  ## create a vector of the chosen colnames
-  ## use the .. syntax to select the items within the vector
-  ## reassignment is required to subset the columns
+  ## Create a vector of the chosen column names
+  ## Use the .. syntax to select the items within the vector
+  ## Reassignment is required to subset the columns
   x <- x[,..sel]
 
-  ## icd10 and opcs are 4digit codes, so clean em up; dont need the subcodes
+  ## icd10 and opcs are 4digit codes, so the strings are trimmed as we dont need the subcodes
   x[,
     (fields) := lapply(.SD,function(x) substr(x,1,4)),
     .SDcols = fields
@@ -322,7 +313,7 @@ inpatient_codes <- function(x,
 
 
   if(type %in% c('icd9','icd10')){
-    ## reshape the data from wide to long so we can manipulate it better
+    ## Reshape the data from wide to long for easier data maniplulation
     x <- data.table::melt(
       data = x,
       id.vars = patient_id_vars,
@@ -333,7 +324,7 @@ inpatient_codes <- function(x,
       variable.factor = FALSE
     )
 
-    ## order the dataset, makes your life easier
+    ## Order the dataset, makes your life easier
     setorderv(x,c(eval(patient_id_vars)))
 
   x[,
@@ -342,7 +333,7 @@ inpatient_codes <- function(x,
     ]
   }
   if(type=='opcs'){
-    ## needs to separate out the dates and codes for each
+    ## Separate the dates and codes for each patient ID
     x <- data.table::melt(
       data = x,
       id.vars = patient_id_vars,
@@ -353,11 +344,11 @@ inpatient_codes <- function(x,
       variable.factor = FALSE
     )
 
-    ## order the dataset, makes your life easier
+    ## Oder the dataset, makes your life easier
     setorderv(x,c(eval(patient_id_vars),'date','order_n'))
   }
 
-  ## drop duplicates
+  ## Drop duplicates
   x <- unique(x,
               by = c(eval(patient_id_vars),type))
 
