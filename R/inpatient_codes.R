@@ -20,7 +20,6 @@
 #' @param field_strings Character vector of regex patterns used to select columns:
   #'   * For ICD types: **one** pattern for diagnosis code columns.
   #'   * For OPCS: **two** patterns—first for procedure codes, second for procedure dates.
-
 #' @param patient_id_vars Character vector of column names that uniquely identify a patient episode or spell. All must exist in `x`.
 #' @param type a string to denote if the codes are diagnostic or procedural. One of `"icd9"`, `"icd10"`, or `"opcs"`.
 #' @param .forceCopy Logical. Default is FALSE; TRUE will force data.table to take a copy
