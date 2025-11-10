@@ -68,10 +68,8 @@ respeciate_generic <- function(x,
   ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
   # tmp.dayR <- tmp.spFlag <- tmp.respecType <- tmp.genus <- NULL
 
-  ## NSE for group_vars
-  group_vars <- substitute(group_vars)
 
-  ## steup some helpful vars first
+  ## setup some helpful vars first
   x[,
     c(
       'tmp.genus',
@@ -85,6 +83,11 @@ respeciate_generic <- function(x,
       )
     ]
 
+  ## NSE for group_vars
+  group_vars <- eval(substitute(group_vars))
+
+  ## Adding tmp.genus to group vars so no cross genus contamination
+  group_vars <- c(group_vars, "tmp.genus")
 
   ## set a static key and order for the table
   data.table::setorderv(x, c(eval(group_vars),date_col))
