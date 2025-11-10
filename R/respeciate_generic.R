@@ -147,7 +147,8 @@ respeciate_generic <- function(x,
           tmp.spFlag==1 & tmp.respecType==2, data.table::shift(get(species_col),type="lead"),
           default = get(species_col)[1]
         )
-      )
+      ),
+      by = group_vars
     ]
 
     respecCount <- sum(x$tmp.respecType %in% c(1,2),na.rm=TRUE)
