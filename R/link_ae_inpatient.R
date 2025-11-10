@@ -16,7 +16,7 @@
 #' @param ae a list to provide data and columns for the A&E (ECDS) data; all arguments provided quoted unless specified
 #'  \describe{
 #'    \item{`data`}{the ECDS A&E dataset provided unquoted}
-#'    \item{`record_id`}{a unique id within the dataset to be retained; optional}
+#'    \item{`record_id`}{Optional. A unique identifier within the dataset. Can be included in either `ae`, `inp`, or both. If present in both, each will be retained as separate columns in the output (`_ae` and `_inp`)}
 #'    \item{`arrival_date`}{the ECDS arrival date}
 #'    \item{`departure_date`}{the ECDS discharge date}
 #'    \item{`nhs_number`}{the patient NHS number}
@@ -27,7 +27,7 @@
 #' @param inp a list to provide data and columns for the inpatient (SUS/HES) data
 #'   \describe{
 #'   \item{`data`}{the HES/SUS inpatient dataset provided unquoted}
-#'    \item{`record_id`}{a unique id within the dataset to be retained; optional}
+#'    \item{`record_id`}{Optional. A unique identifier within the dataset. Can be included in either `ae`, `inp`, or both. If present in both, each will be retained as separate columns in the output (`_ae` and `_inp`)}
 #'   \item{`spell_start_date`}{a string containing the inpatient (SUS/HES) admission date column name; all arguments provided quoted unless specified}
 #'   \item{`spell_id`}{the HES/SUS spell id}
 #'   \item{`nhs_number`}{the patient NHS number}
@@ -325,6 +325,24 @@ link_ae_inpatient <- function(
     ),
     .forceCopy = FALSE) {
 
+
+  # Define required fields
+  required_ae <- c("data", "nhs_number", "hospital_number", "patient_dob", "org_code", "arrival_date", "departure_date")
+  required_inp <- c("data", "nhs_number", "hospital_number", "patient_dob", "org_code", "spell_id", "spell_start_date")
+
+  # Check ae fields
+  missing_ae <- setdiff(required_ae, names(ae))
+  if (length(missing_ae) > 0) {
+    stop(paste("Missing required fields in 'ae':", paste(missing_ae, collapse = ", ")))
+  }
+
+  # Check inp fields
+  missing_inp <- setdiff(required_inp, names(inp))
+  if (length(missing_inp) > 0) {
+    stop(paste("Missing required fields in 'inp':", paste(missing_inp, collapse = ", ")))
+  }
+
+
   if (.forceCopy) {
     inp$data <- data.table::copy(inp$data)
     ae$data <- data.table::copy(ae$data)
@@ -370,16 +388,39 @@ link_ae_inpatient <- function(
   inpNHS <- inp$data[!is.na(x),
                      env = list(x = ae$nhs_number)]
 
+  # Map ae df
   aeNHS[, c('link_id',
             'link_dob',
             'link_org') := .(get(ae$nhs_number),
                              get(ae$patient_dob),
                              get(ae$org_code))]
+
+  # Set ae record_id if present and create object to add to cols
+  # Set to NULL if not present otherwise overwrite
+  ae_record_out <- NULL
+
+  if (!is.null(ae$record_id) && nzchar(ae$record_id) && ae$record_id %chin% names(aeNHS)) {
+    ae_record_out <- paste0(ae$record_id, "_ae")
+    setnames(aeNHS, old = ae$record_id, new = ae_record_out)
+  }
+
+  # Map inp df
   inpNHS[, c('link_id',
              'link_dob',
              'link_org') := .(get(ae$nhs_number),
                               get(ae$patient_dob),
                               get(ae$org_code))]
+
+
+  # Set inp record_id if present and create object to add to cols
+  # Set to NULL if not present otherwise overwrite
+  inp_record_out <- NULL
+
+  if (!is.null(inp$record_id) && nzchar(inp$record_id) && inp$record_id %chin% names(inpNHS)) {
+    inp_record_out <- paste0(inp$record_id, "_inp")
+    setnames(inpNHS, old = inp$record_id, new = inp_record_out)
+  }
+
 
   ## valid hospital number links
   aeHOS <- ae$data[
@@ -466,12 +507,40 @@ link_ae_inpatient <- function(
   linknames[[ae$org_code]] <-  grep(ae$org_code,names(link),value=TRUE)
 
   # if an ID column exists
-  if("id.ae" %in% names(link)) {
-    link[, id := data.table::fifelse(is.na(id.ae),id.inp,id.ae)]
+
+  # Ensure we have the dynamic names and they exist in `link`
+  has_ae_id  <- !is.null(ae_record_out)  && ae_record_out  %chin% names(link)
+  has_inp_id <- !is.null(inp_record_out) && inp_record_out %chin% names(link)
+
+  if (has_ae_id && has_inp_id) {
+    # Both present: choose AE when not NA, otherwise INP
+    link[, id := data.table::fifelse(
+      is.na(get(ae_record_out)),
+      get(inp_record_out),
+      get(ae_record_out)
+    )]
+    id_out <- "id"
+
+  } else if (has_ae_id) {
+    # Only AE present
+    link[, id := get(ae_record_out)]
+    id_out <- "id"
+
+  } else if (has_inp_id) {
+    # Only INP present
+    link[, id := get(inp_record_out)]
+    id_out <- "id"
+
+  } else {
+
+    id_out <- NULL
   }
 
+
   ## loop through identifiers and consolidate
-  ids <- as.vector(unlist(lapply(ae[c(4:length(ae))],`[[`,1)))
+  #ids <- as.vector(unlist(lapply(ae[c(4:length(ae))],`[[`,1)))
+  ids <- names(linknames)
+
   for(i in ids){
 
     link[,(i) := data.table::fifelse(is.na(v1),v2,v1),
@@ -508,26 +577,6 @@ link_ae_inpatient <- function(
   #        ]
   # }
 
-  ## if you want to keep a uid column
-  cols <- as.vector(unlist(lapply(ae[c(2:length(ae))],`[[`,1)))
-
-  if(exists('record_id',where=ae) & exists('record_id',where=inp)){
-    if(ae$record_id == inp$record_id){
-
-      names(link) <- gsub(paste0(ae$record_id,'.ae'),
-                          paste0(ae$record_id,'_ae'),
-                          names(link))
-
-      names(link) <- gsub(paste0(ae$record_id,'.inp'),
-                          paste0(ae$record_id,'_inp'),
-                          names(link))
-
-      cols <- gsub(paste0('^',ae$record_id), paste0(ae$record_id,"_ae"), cols)
-      cols <- c(cols, paste0(inp$record_id,"_inp"))
-
-    }
-  }
-
   ## capture and delete extra cols
   rmcols <- c(
     grep("link_",names(link),value = TRUE),
@@ -535,6 +584,15 @@ link_ae_inpatient <- function(
     grep("[\\.]inp",names(link),value = TRUE))
 
   link[, (rmcols) := NULL]
+
+  # Get cols names required from original ae df
+  cols <- as.vector(unlist(lapply(ae[c(3:length(ae))],`[[`,1)))
+
+  # add on column names for record_id and id if present
+  cols <- c(cols, ae_record_out, inp_record_out, id_out)
+
+  # Remove nulls if record_id/id not present
+  cols <- unique(na.omit(cols))
 
   ## put ID cols at the beginning
   data.table::setcolorder(x = link,
