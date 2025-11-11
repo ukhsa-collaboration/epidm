@@ -187,5 +187,46 @@ test_that("respeciation does not cross genus boundaries (tmp.genus included)", {
   # If tmp.genus is used correctly, genus must be identical
   expect_equal(original_genus, new_genus)
 })
+# -----------------------------------------------------------
+test_that("no trailing UNNAMED remains after respeciation", {
+  df_in <- data.frame(
+    ptid = c(1,1,1,2,2,3,3,4,4),
+    type = c("BLOOD","BLOOD","BLOOD","URINE","URINE","BLOOD","BLOOD","URINE","URINE"),
+    specdate = as.Date("2025-11-01") + 0:8,
+    spec = c(
+      "ESCHERICHIA UNNAMED",
+      "ESCHERICHIA UNNAMED ",
+      "escherichia unnamed",
+      "KLEBSIELLA   UNNAMED",
+      "KLEBSIELLA UnNaMeD",
+      "STAPHYLOCOCCUS SP",
+      "STAPHYLOCOCCUS UNNAMED ",
+      "ESCHERICHIA SP",
+      "KLEBSIELLA PNEUMONIAE"
+    ),
+    stringsAsFactors = FALSE
+  )
+
+  res <- respeciate_generic(
+    x = df_in,
+    group_vars = c("ptid", "type"),
+    species_col = "spec",
+    date_col = "specdate",
+    window = 7,
+    .forceCopy = TRUE
+  )
+
+  # No species should end with the literal "UNNAMED" (case-insensitive)
+  expect_false(
+    any(str_detect(res$spec, stringr::regex("\\bUNNAMED\\s*$", ignore_case = TRUE))),
+    info = "Found one or more species still ending with UNNAMED"
+  )
+
+  # Species column should be character and contain no NA values
+  expect_type(res$spec, "character")
+  expect_false(any(is.na(res$spec)), info = "Found NA in resulting species column")
+})
+
+
 
 

@@ -9,13 +9,17 @@
 #' "GENUS UNNAMED". However, they may also have a fully identified sample taken
 #' from the same site within a recent time period.  This function captures
 #' species_col  from another sample within X-days of an unspeciated isolate.
+#' Respeciation is restricted to organisms of the same genus; species will not
+#' be inferred from isolates belonging to a different genus. Trailing "UNNAMED"
+#' is normalised to "SP" before any processing.
 #'
 #' @import data.table
 #' @importFrom stringr str_detect
 #'
 #' @param x a data.frame or data.table object
 #' @param group_vars the minimum grouping set of variables for like samples in
-#'   a character vector; suggest c('patient_id','specimen_type','genus')
+#'   a character vector; suggest c('patient_id','specimen_type') - genus will automatically
+#'   be included in the groupby. This is built from the species_col
 #' @param species_col a character containing the column with the organism species_col
 #'   name
 #' @param date_col a character containing the column with the specimen/sample date_col
@@ -58,16 +62,15 @@ respeciate_generic <- function(x,
 
   ## convert data.frame to data.table or take a copy
   if(.forceCopy) {
-    x <- data.table::copy(x)
+    x <- data.table::as.data.table(data.table::copy(x))
   } else {
     data.table::setDT(x)
   }
 
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # tmp.dayR <- tmp.spFlag <- tmp.respecType <- tmp.genus <- NULL
-
+  # Normalising species names
+  x[, (species_col) := trimws(as.character(get(species_col)))] # Remove any whitespace
+  x[, (species_col) := toupper(get(species_col))]                     # upper-case for consistent matching
+  x[, (species_col) := sub("\\bUNNAMED\\b$", "SP", get(species_col))] # change UNNAMED -> SP
 
   ## setup some helpful vars first
   x[,
@@ -77,7 +80,7 @@ respeciate_generic <- function(x,
       ) := .(
         gsub("([A-Za-z]+).*", "\\1", get(species_col)),
         data.table::fifelse(
-          stringr::str_detect(get(species_col), " SP$|UNNAMED$|species_col$"),
+          stringr::str_detect(get(species_col), " SP$|species_col$"),
           1,
           0)
       )
@@ -119,7 +122,7 @@ respeciate_generic <- function(x,
           ),
         data.table::fifelse(
           stringr::str_detect(get(species_col),
-                              " SP$|UNNAMED$|species_col$"),
+                              " SP$|species_col$"),
           1,0)
 
       ),
