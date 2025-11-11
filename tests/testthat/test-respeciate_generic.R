@@ -112,11 +112,7 @@ test_that("no change occurs when all isolates are already fully speciated", {
     )
   )
 
-  # Reorder both input and output by ptid, type, specdate
-  df_full_sorted <- df_full[order(df_full$ptid, df_full$type, df_full$specdate), ]
-  result_sorted <- result[order(result$ptid, result$type, result$specdate), ]
-
-  expect_equal(result_sorted$spec, df_full_sorted$spec)
+  expect_equal(result$spec, df_full$spec)
 })
 
 # -----------------------------------------------------------
@@ -139,11 +135,7 @@ test_that("no change occurs when all isolates are unspecified", {
     )
   )
 
-  # Reorder both input and output by ptid, type, specdate
-  df_sp_sorted <- df_sp[order(df_sp$ptid, df_sp$type, df_sp$specdate), ]
-  result_sorted <- result[order(result$ptid, result$type, result$specdate), ]
-
-  expect_equal(result_sorted$spec, df_sp_sorted$spec)
+  expect_equal(result$spec, df_sp$spec)
 })
 # -----------------------------------------------------------
 test_that("no trailing UNNAMED remains after respeciation", {
