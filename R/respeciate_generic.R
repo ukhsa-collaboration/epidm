@@ -90,10 +90,10 @@ respeciate_generic <- function(x,
   group_vars <- eval(substitute(group_vars))
 
   ## Adding tmp.genus to group vars so no cross genus contamination
-  group_vars_with_tmp_genus <- c(group_vars, "tmp.genus")
+  group_vars <- c(group_vars, "tmp.genus")
 
   ## set a static key and order for the table
-  data.table::setorderv(x, c(eval(group_vars_with_tmp_genus),date_col))
+  data.table::setorderv(x, c(eval(group_vars),date_col))
 
 
   ## loop counters
@@ -126,7 +126,7 @@ respeciate_generic <- function(x,
           1,0)
 
       ),
-      by = group_vars_with_tmp_genus
+      by = group_vars
     ][,
       tmp.dayR := data.table::fifelse(is.na(tmp.dayR),0,tmp.dayR)
       ]
@@ -138,7 +138,7 @@ respeciate_generic <- function(x,
         tmp.spFlag==1 & data.table::shift(tmp.spFlag,type="lead")==0,2,
         default = 0
       ),
-      by = group_vars_with_tmp_genus
+      by = group_vars
     ]
 
     ## okay; recode the organism based on the flags
@@ -151,7 +151,7 @@ respeciate_generic <- function(x,
           default = get(species_col)[1]
         )
       ),
-      by = group_vars_with_tmp_genus
+      by = group_vars
     ]
 
     respecCount <- sum(x$tmp.respecType %in% c(1,2),na.rm=TRUE)
@@ -181,9 +181,6 @@ respeciate_generic <- function(x,
   x[,
     (tmpcols) := NULL
   ]
-
-  # Re ordering at end
-  data.table::setorderv(x, c(group_vars, date_col))
 
   return(x)
 }
