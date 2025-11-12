@@ -62,7 +62,7 @@ respeciate_generic <- function(x,
 
   ## convert data.frame to data.table or take a copy
   if(.forceCopy) {
-    x <- data.table::as.data.table(data.table::copy(x))
+    x <- data.table::copy(x)
   } else {
     data.table::setDT(x)
   }
