@@ -170,8 +170,7 @@ test_that("no trailing UNNAMED remains after respeciation", {
     group_vars = c("ptid", "type"),
     species_col = "spec",
     date_col = "specdate",
-    window = 7,
-    .forceCopy = TRUE
+    window = 7
   )
 
   # No species should end with the literal "UNNAMED" (case-insensitive)
