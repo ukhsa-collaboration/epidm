@@ -168,18 +168,6 @@ cip_spells <- function(x,
     warning("There are missing values in date columns. Results may be affected.")
   }
 
-
-
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # cip_indx <-
-  #   tmp.spellN <-
-  #   tmp.cip2daydiff <- tmp.cipTransfer <- tmp.cipExclude <-
-  #   tmp.dateNumStart <- tmp.dateNumEnd <- tmp.regular_attender <-
-  #   tmp.windowNext <- tmp.windowCmax <-
-  #   NULL
-
   ## just arrange the data
   data.table::setorderv(x,c(eval(group_vars),spell_start_date))
 
