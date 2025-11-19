@@ -40,6 +40,7 @@ utils::globalVariables(
     'tmp.regular_attender',
     'tmp.respecType',
     'tmp.spFlag',
+    'tmp.genus',
     'tmp.spell.N',
     'tmp.spell.n',
     'tmp.spellN',

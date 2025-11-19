@@ -17,7 +17,8 @@ respeciate_generic(
 \item{x}{a data.frame or data.table object}
 
 \item{group_vars}{the minimum grouping set of variables for like samples in
-a character vector; suggest c('patient_id','specimen_type','genus')}
+a character vector; suggest c('patient_id','specimen_type') - genus will automatically
+be included in the groupby. This is built from the species_col}
 
 \item{species_col}{a character containing the column with the organism species_col
 name}
@@ -40,6 +41,9 @@ Some samples within SGSS are submitted by laboratories as "GENUS SP" or
 "GENUS UNNAMED". However, they may also have a fully identified sample taken
 from the same site within a recent time period.  This function captures
 species_col  from another sample within X-days of an unspeciated isolate.
+Respeciation is restricted to organisms of the same genus; species will not
+be inferred from isolates belonging to a different genus. Trailing "UNNAMED"
+is normalised to "SP" before any processing.
 }
 \examples{
 
