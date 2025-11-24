@@ -9,14 +9,6 @@ test_that("proxy_episode_dates returns a data.table", {
                              spell_end_date = "spell_end",
                              discharge_destination = "disdest")
 
-  result <- proxy_episode_dates(
-    x = proxy_test,
-    group_vars = c("id", "provider"),
-    spell_start_date = "spell_start",
-    spell_end_date = "spell_end",
-    discharge_destination = "disdest"
-  )
-
   expect_true(is.data.table(result))
 })
 # -----------------------------------------------------------
