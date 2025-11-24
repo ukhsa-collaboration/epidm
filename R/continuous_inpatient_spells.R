@@ -125,6 +125,11 @@ cip_spells <- function(x,
                        patient_classification,
                        .forceCopy = FALSE) {
 
+
+  if (!is.data.frame(x) && !data.table::is.data.table(x)) {
+    stop("Input `x` must be a data.frame or data.table.")
+  }
+
   ## convert data.frame to data.table or take a copy
   if(.forceCopy) {
     x <- data.table::copy(x)
@@ -132,15 +137,36 @@ cip_spells <- function(x,
     data.table::setDT(x)
   }
 
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # cip_indx <-
-  #   tmp.spellN <-
-  #   tmp.cip2daydiff <- tmp.cipTransfer <- tmp.cipExclude <-
-  #   tmp.dateNumStart <- tmp.dateNumEnd <- tmp.regular_attender <-
-  #   tmp.windowNext <- tmp.windowCmax <-
-  #   NULL
+  # Error handling
+
+  # Validate input columns
+  required_cols <- c(group_vars, spell_start_date, admission_method, admission_source,
+                     spell_end_date, discharge_destination, patient_classification)
+
+  missing_cols <- setdiff(required_cols, names(x))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+
+  # Validate date column
+  if (!inherits(x[[spell_start_date]], "Date") || !inherits(x[[spell_end_date]], "Date")) {
+    stop("Columns for spell start and end dates must be of type Date.")
+  }
+
+  # Check for empty data
+  if (nrow(x) == 0) {
+    stop("Input data has zero rows. Cannot compute CIP spells.")
+  }
+
+  # Validate grouping variables
+  if (anyDuplicated(group_vars)) {
+    stop("`group_vars` contains duplicates. Provide unique column names.")
+  }
+
+  # Warning about missing dates
+  if (anyNA(x[[spell_start_date]]) || anyNA(x[[spell_end_date]])) {
+    warning("There are missing values in date columns. Results may be affected.")
+  }
 
   ## just arrange the data
   data.table::setorderv(x,c(eval(group_vars),spell_start_date))
