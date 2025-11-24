@@ -34,11 +34,19 @@ valid_nhs <- function(nhs_number){
     ## immediately fail the missing NHS numbers OR
     ## if its got the wrong number of digits
 
-    if(is.na(NHS)){
+    if(is.na(NHS) || NHS == ""){
+
+      warning("NHS number is missing or empty")
 
       ReturnValue <- 0
 
     } else if(nchar(as.character(NHS))!=10) {
+
+      warning(paste(
+        "Invalid NHS number length:",
+        NHS,
+        "- must be exactly 10 digits"
+      ))
 
       ReturnValue <- 0
 
