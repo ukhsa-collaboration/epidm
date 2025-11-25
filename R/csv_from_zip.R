@@ -38,6 +38,12 @@ csv_from_zip <- function(x) {
     stop("Failed to read ZIP: ", e$message)
   })
 
+  # Zip is empty
+  if (length(files_in_zip) == 0) {
+    stop("The ZIP archive is empty.")
+  }
+
+
   # Added pattern to overcome case sensitivity
   pattern <- "\\.csv$"
 
