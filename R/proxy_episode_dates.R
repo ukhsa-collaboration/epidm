@@ -82,6 +82,31 @@ proxy_episode_dates <- function(x,
     data.table::setDT(x)
   }
 
+  # Error handling
+
+  # Validate input columns
+  required_cols <- c(group_vars, spell_start_date, spell_end_date, discharge_destination)
+
+  missing_cols <- setdiff(required_cols, names(x))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+
+  # Validate date column
+  if (!inherits(x[[spell_start_date]], "Date") || !inherits(x[[spell_end_date]], "Date")) {
+    stop("Columns for spell start and end dates must be of type Date.")
+  }
+
+  # Check for empty data
+  if (nrow(x) == 0) {
+    stop("Input data has zero rows.")
+  }
+
+  # Validate grouping variables
+  if (anyDuplicated(group_vars)) {
+    stop("`group_vars` contains duplicates. Provide unique column names.")
+  }
+
   ## Needed to prevent RCMD Check fails
   ## recommended by data.table
   ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
