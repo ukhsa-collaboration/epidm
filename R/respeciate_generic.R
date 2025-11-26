@@ -67,6 +67,36 @@ respeciate_generic <- function(x,
     data.table::setDT(x)
   }
 
+  # Error handling
+
+  # Validate input columns
+  required_cols <- c(group_vars, species_col, date_col)
+
+  missing_cols <- setdiff(required_cols, names(x))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+
+  # Validate date column
+  if (!inherits(x[[date_col]], "Date")) {
+    stop("Column for date_col must be of type Date.")
+  }
+
+  # Check for empty data
+  if (nrow(x) == 0) {
+    stop("Input data has zero rows.")
+  }
+
+  # Validate grouping variables
+  if (anyDuplicated(group_vars)) {
+    stop("`group_vars` contains duplicates. Provide unique column names.")
+  }
+
+  # Warning about missing dates
+  if (anyNA(x[[date_col]])) {
+    warning("There are missing values in date column. Results may be affected.")
+  }
+
   # Normalising species names
   x[, (species_col) := trimws(as.character(get(species_col)))] # Remove any whitespace
   x[, (species_col) := toupper(get(species_col))]                     # upper-case for consistent matching
