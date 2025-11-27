@@ -60,31 +60,33 @@ hospital_in_out_dates <- function(data,
                                     in_spell_start = 'spell_start_date',
                                     in_spell_end = 'spell_end_date',
                                     in_discharge = 'discharge_destination'
-                                    )
-                                  ){
+                                  )
+){
 
   ## A&E discharge events resulting in an inpatient stay
   ae_admission <- c("Admitted","Transfer")
 
-  ## ensure dates are in date format
-  for(i in c(hospital$event_date,
-             hospital$ae_arrive,
-             hospital$ae_depart,
-             hospital$in_spell_start,
-             hospital$in_spell_end)) {
+  # Ensure date columns are in Date format
+  date_cols <- c(hospital$event_date,
+                 hospital$ae_arrive,
+                 hospital$ae_depart,
+                 hospital$in_spell_start,
+                 hospital$in_spell_end)
 
-    # check if its a date class
-    if(inherits(i,"Date")){
-      link[,
-           date := as.Date(date),
-           env = list(date = i)
-      ]
+  for (col in date_cols) {
+    if (col %in% names(data)) {
+      # Convert to Date if not already
+      if (!inherits(data[[col]], "Date")) {
+        data[, (col) := as.Date(get(col))]
+      }
+    } else {
+      warning(sprintf("Column '%s' not found in data", col))
     }
-
   }
 
+
   ## source flag, this lets you determine which data its linked to
-  link[, source := data.table::fcase(
+  data[, source := data.table::fcase(
     !is.na(ae_in) & !is.na(in_in), "ECDS:SUS",
     !is.na(ae_in) &  is.na(in_in), "ECDS",
     is.na(ae_in)  & !is.na(in_in), "SUS",
@@ -95,7 +97,7 @@ hospital_in_out_dates <- function(data,
   ]
 
 
-  link[!is.na(ae_in) | !is.na(in_in),
+  data[!is.na(ae_in) | !is.na(in_in),
        `:=`(
          hospital_in=fifelse(!is.na(ae_in),ae_in,in_in),
          hospital_out=fifelse(!is.na(in_out),in_out,ae_out)
@@ -106,12 +108,12 @@ hospital_in_out_dates <- function(data,
                   in_out = hospital$in_spell_end)
   ]
 
-  data.table::setorder(link, get(person_id), hospital_in, hospital_out)
+data.table::setorderv(data, cols = c(person_id, "hospital_in", hospital$event_date))
 
-  ## ECDS episodes where the SUS record has not yet come in
+## ECDS episodes where the SUS record has not yet come in
   ## if the patient was admitted as an inpatient, and its less than 60 days
   ## code them as still being an inpatient
-  link[source=="ECDS",
+  data[source=="ECDS",
        ecds_proxy_date := ae_dis == "Admitted" & difftime(Sys.Date(),
                                                           ev_date,
                                                           units="days") < 90,
@@ -119,7 +121,7 @@ hospital_in_out_dates <- function(data,
                   ev_date = hospital$event_date)
   ]
 
-  link[ecds_proxy_date==TRUE,
+  data[ecds_proxy_date==TRUE,
        hospital_out := Sys.Date()]
 
   ## group togerher ECDS and SUS records where they overlap
@@ -130,23 +132,25 @@ hospital_in_out_dates <- function(data,
     grp <- c(person_id)
   }
 
-  link <- epidm::group_time(x = link,
+  group_as_list <- data[, ..grp]  # data.table subset returns a data.table (a list of vectors)
+
+  data <- epidm::group_time(x = data,
                             date_start = 'hospital_in',
                             date_end = 'hospital_out',
-                            group_vars= grp,
+                            group_vars= group_as_list,
                             indx_varname = "indx",
                             min_varname = "hospital_in2",
                             max_varname = "hospital_out2")
 
-  data.table::setorder(link, get(patient_id), hospital_in, hospital$event_date)
+  data.table::setorderv(data, cols = c(person_id, "hospital_in", hospital$event_date))
 
-  link[,
+  data[,
        c('hospital_in',
          'hospital_out'
        ) := NULL
   ]
 
-  setnames(link,
+  setnames(data,
            c("hospital_in2","hospital_out2"),
            c("hospital_in","hospital_out")
   )
@@ -154,7 +158,7 @@ hospital_in_out_dates <- function(data,
   ## APPLY HOSPITAL EVENT ORDER #################################################
   ## create some key indicators
 
-  link[!is.na(hospital_in),
+  data[!is.na(hospital_in),
        `:=`(
          diff_pos_admit = as.integer(difftime(
            hospital_in,
@@ -177,7 +181,7 @@ hospital_in_out_dates <- function(data,
        )
   ]
 
-  link[!is.na(hospital_in),
+  data[!is.na(hospital_in),
        `:=`(
          inpatient_stay = ecds_discharge %in% ae_admission | grepl("SUS",source),
          pos_in_hospital = ev_date %within% interval(hospital_in,hospital_out),
@@ -198,41 +202,56 @@ hospital_in_out_dates <- function(data,
                   ev_date = hospital$event_date)
   ]
 
-  ## order and mark valid entries
-  data.table::setorderv(
-    link,
-    cols = c(
-      new_unique_identifier,
-      -valid_hospital_link,
-      abs_admit,
-      abs_discharge,
-      -pos_in_hospital,
-      -pos14_order,
-      -hospital_in,
-      -hospital_out,
-      ev_date
-    )
+  # CHECK where new_unique_identifier comes from is this id?
+  # Check where valid_hospital_link comes from
+
+  # Define column names as strings
+  order_cols <- c(
+    "id",
+    "valid_hospital_link",
+    "abs_admit",
+    "abs_discharge",
+    "pos_in_hospital",
+    "pos14_order",
+    "hospital_in",
+    "hospital_out",
+    hospital$event_date       # dynamic from hospital list
   )
 
-  link <- unique(link,
-                 by = c('new_unique_identifier',
+  # Define sort directions (1 = ascending, -1 = descending)
+  order_dirs <- c(1, -1, 1, 1, -1, -1, -1, -1, 1)
+
+  # Check columns exist
+  missing_cols <- setdiff(order_cols, names(data))
+  if (length(missing_cols)) {
+    warning(sprintf("Skipping ordering; missing columns: %s", paste(missing_cols, collapse = ", ")))
+  } else {
+    data.table::setorderv(data, cols = order_cols, order = order_dirs)
+  }
+
+
+  data <- unique(data,
+                 by = c(#'new_unique_identifier',
+                        'id',
                         'organisation_code_of_provider',
                         'ev_date',
                         'indx',
                         'hospital_in',
                         'hospital_out'))
 
-  link[,N := .N, by = 'new_unique_identifier']
+  data[,N := .N, by =
+         #'new_unique_identifier'
+         'id']
 
-  link[,drop := N>1 & !is.na(source) & is.na(hospital_in)]
+  data[,drop := N>1 & !is.na(source) & is.na(hospital_in)]
 
-  link <- link[drop==FALSE,]
+  data <- data[drop==FALSE,]
 
-  link[valid_hospital_link==TRUE,
+  data[valid_hospital_link==TRUE,
        hospital_event_rank := seq_len(.N),
        by = new_unique_identifier]
 
-  link[, source := fifelse(is.na(source), "CASE",
+  data[, source := fifelse(is.na(source), "CASE",
                            paste0("CASE:",source))
   ]
 
@@ -242,5 +261,5 @@ hospital_in_out_dates <- function(data,
     (tmpcols) := NULL
   ]
 
-  return(link)
+  return(data)
 }
