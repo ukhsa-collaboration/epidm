@@ -116,3 +116,28 @@ test_that("lookup handles NA values correctly", {
   expect_true(is.na(result))
 })
 # -----------------------------------------------------------
+test_that("lookup_recode() validates src correctly", {
+
+  # Missing src error
+  expect_error(
+    lookup_recode(type = "species"),
+    "'src' must be supplied\\."
+  )
+  # Invalid types should trigger your error message
+  invalid_error <- "'src' must be a character vector, factor, atomic vector, or column\\."
+
+  expect_error(
+    lookup_recode(data.frame(x = "A"), type = "species"),
+    invalid_error
+  )
+
+  # character
+  expect_no_error(lookup_recode("ABC", type = "species"))
+
+  # numeric
+  expect_no_error(lookup_recode(12345, type = "species"))
+
+  # factor
+  expect_no_error(lookup_recode(factor("ABC"), type = "species"))
+
+})

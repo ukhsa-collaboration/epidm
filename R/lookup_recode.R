@@ -79,8 +79,8 @@ lookup_recode <- function(src,
   }
 
   # Check type of src is correct
-  if (!is.atomic(src) && !is.list(src) && !is.factor(src)) {
-    stop("'src' must be a character vector, factor, atomic vector, or column.", call. = FALSE)
+  if (!(is.atomic(src) || is.factor(src))) {
+    stop("'src' must be a character, numeric, logical, or factor vector (i.e., a column).", call. = FALSE)
   }
 
   type <- match.arg(type)
