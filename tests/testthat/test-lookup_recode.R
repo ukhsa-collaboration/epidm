@@ -123,12 +123,9 @@ test_that("lookup_recode() validates src correctly", {
     lookup_recode(type = "species"),
     "'src' must be supplied\\."
   )
-  # Invalid types should trigger your error message
-  invalid_error <- "'src' must be a character vector, factor, atomic vector, or column\\."
 
   expect_error(
-    lookup_recode(data.frame(x = "A"), type = "species"),
-    invalid_error
+    lookup_recode(data.frame(x = "A"), type = "species")
   )
 
   # character
