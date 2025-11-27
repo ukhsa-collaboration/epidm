@@ -21,18 +21,29 @@
 #' "FROM DATASET ","-- output here")
 #' sql_clean(testSQL)
 #'
-#'
 #' @return a cleaned SQL query without comments as a character string
 #' @export
 #'
 
 sql_clean <- function(sql) {
 
+
+  # Validate input
+  if (missing(sql) || length(sql) == 0) {
+    stop("Input 'sql' cannot be empty.")
+  }
+  if (!is.character(sql)) {
+    stop("Input 'sql' must be a character string or vector.")
+  }
+
   ## a character string
   if(length(sql)==1){
     ## thats a SQL query stored in a .sql or .txt file
     if(grepl(".(sql|txt)$",sql,ignore.case=TRUE)){
+      if (!file.exists(sql)) stop("File does not exist: ", sql)
+
       x <- readr::read_lines(sql)
+      if (length(x) == 0) stop("File is empty: ", sql)
     } else {
       ## or just a SQL query as text eg. 'SELECT * FROM TABLE'
       x <- sql
