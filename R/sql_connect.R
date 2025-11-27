@@ -49,6 +49,21 @@ sql_connect <- function(server,
   ## cycle through the available drivers on the machine to find the right one
   ## this is helpful if you're on a linux system/container and not Windows
 
+  # Error handling
+
+  if (missing(server) || !is.character(server) || is.null(server) || length(server) == 0 || server == "") {
+    stop("'server' must be a non-empty character string.")
+  }
+  if (missing(database) || !is.character(database) || is.null(server) || length(database) == 0 || database == "") {
+    stop("'database' must be a non-empty character string.")
+  }
+
+  # Check available drivers
+  drivers <- unique(odbc::odbcListDrivers()$name)
+  if (length(drivers) == 0) {
+    stop("No ODBC drivers found. Please install SQL Server ODBC drivers.")
+  }
+
   # Message to use '\\' in the R server connection string.
   message("Please note: Use '\\\\' in R strings for server connections.")
 
@@ -62,13 +77,16 @@ sql_connect <- function(server,
                         'timeout=120'
                         )
 
-    # connect to the database
-    odbcConnect <- odbc::dbConnect(
-      odbc::odbc(),
-      .connection_string = conString
-    )
+    # connect to the database safely
+    odbcConnect <- tryCatch({
+      odbc::dbConnect(
+        odbc::odbc(),
+        .connection_string = conString
+      )
+    }, error = function(e) NULL)
 
-    if(DBI::dbIsValid(odbcConnect)) {
+    # check if connection is valid
+    if (!is.null(odbcConnect) && DBI::dbIsValid(odbcConnect)) {
       break
     }
   }
