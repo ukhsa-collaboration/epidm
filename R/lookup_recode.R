@@ -73,6 +73,20 @@ lookup_recode <- function(src,
                                  'manual'),
                           .import = NULL) {
   # Error handling
+  # Must be provided
+  if (missing(src)) {
+    stop("'src' must be supplied.", call. = FALSE)
+  }
+
+  # Allow vectors, lists of length >1, or data.frame/tibble columns
+  if (!is.atomic(src) && !is.list(src) && !is.factor(src)) {
+    stop("'src' must be an atomic vector, factor, or list-like column.", call. = FALSE)
+  }
+  # Check for empty data
+  if (nrow(src) == 0) {
+    stop("Input data has zero rows.")
+  }
+
   type <- match.arg(type)
 
   if (type == 'manual' & missing(.import)) {
