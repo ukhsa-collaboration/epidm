@@ -59,7 +59,7 @@ sql_connect <- function(server,
   }
 
   # Check available drivers
-  drivers <- unique(odbc::odbcListDrivers()$name)
+  drivers <- unique(odbcListDrivers()$name)
   if (length(drivers) == 0) {
     stop("No ODBC drivers found. Please install SQL Server ODBC drivers.")
   }
@@ -67,7 +67,7 @@ sql_connect <- function(server,
   # Message to use '\\' in the R server connection string.
   message("Please note: Use '\\\\' in R strings for server connections.")
 
-  for(driver in unique(odbc::odbcListDrivers()$name)){
+  for(driver in unique(odbcListDrivers()$name)){
 
     ## uses Active Directory credentials
     conString <- paste0('driver={',driver,'};',
@@ -79,16 +79,21 @@ sql_connect <- function(server,
 
     # connect to the database safely
     odbcConnect <- tryCatch({
-      odbc::dbConnect(
-        odbc::odbc(),
+      dbConnect(
+        odbc(),
         .connection_string = conString
       )
     }, error = function(e) NULL)
 
     # check if connection is valid
-    if (!is.null(odbcConnect) && DBI::dbIsValid(odbcConnect)) {
+    if (!is.null(odbcConnect) && dbIsValid(odbcConnect)) {
       break
     }
+  }
+
+  # Final validation
+  if (is.null(odbcConnect) || !dbIsValid(odbcConnect)) {
+    stop("Failed to establish a SQL connection. Verify server name, database name, and that ODBC drivers are installed.")
   }
 
   return(odbcConnect)
