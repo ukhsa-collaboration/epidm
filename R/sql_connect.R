@@ -54,7 +54,7 @@ sql_connect <- function(server,
   if (missing(server) || !is.character(server) || is.null(server) || length(server) == 0 || server == "") {
     stop("'server' must be a non-empty character string.")
   }
-  if (missing(database) || !is.character(database) || is.null(server) || length(database) == 0 || database == "") {
+  if (missing(database) || !is.character(database) || is.null(database) || length(database) == 0 || database == "") {
     stop("'database' must be a non-empty character string.")
   }
 
