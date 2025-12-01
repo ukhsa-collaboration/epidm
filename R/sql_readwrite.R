@@ -33,16 +33,16 @@ sql_read <- function(server,
     stop("Parameter 'sql' must be a non-empty string containing a query or file path.")
   }
 
-  odbcConnect <- epidm::sql_connect(server = server, database = database)
-  on.exit(DBI::dbDisconnect(odbcConnect), add = TRUE)
+  odbcConnect <- sql_connect(server = server, database = database)
+  on.exit(dbDisconnect(odbcConnect), add = TRUE)
 
-  if (!DBI::dbIsValid(odbcConnect)) stop("Invalid database connection.")
+  if (!dbIsValid(odbcConnect)) stop("Invalid database connection.")
 
-  query <- epidm::sql_clean(sql)
+  query <- sql_clean(sql)
   timeStart <- Sys.time()
 
   tableResult <- tryCatch({
-    DBI::dbGetQuery(odbcConnect, query)
+    dbGetQuery(odbcConnect, query)
   }, error = function(e) {
     stop("SQL query failed: ", e$message)
   })
@@ -58,7 +58,7 @@ sql_read <- function(server,
   return(tableResult)
 
   # close the connection
-  DBI::dbDisconnect(odbcConnect)
+  dbDisconnect(odbcConnect)
 
 }
 
@@ -108,8 +108,8 @@ sql_write <- function(x,
   }
 
   ## connect to the database
-  odbcConnect <- epidm::sql_connect(server = server, database = database)
-  on.exit(DBI::dbDisconnect(odbcConnect), add = TRUE)
+  odbcConnect <- sql_connect(server = server, database = database)
+  on.exit(dbDisconnect(odbcConnect), add = TRUE)
 
   # used to check if the table outputs upload
   checkSQL <- paste0('SELECT COUNT(*) FROM ',database,'.dbo.',tablename)
@@ -117,15 +117,15 @@ sql_write <- function(x,
   # check the object exists
   if(exists('x')){
     if(nrow(x)>0){
-      if(DBI::dbIsValid(odbcConnect)){
+      if(dbIsValid(odbcConnect)){
         message('connection established')
       } else{
-        odbcConnect <- epidm::sql_connect(server = server, database = database)
+        odbcConnect <- sql_connect(server = server, database = database)
       }
 
       ## upload check to ensure the full dataset is uploaded
-      if(DBI::dbExistsTable(odbcConnect,tablename)){
-        DBrows <- DBI::dbGetQuery(odbcConnect,checkSQL)[1,1]
+      if(dbExistsTable(odbcConnect,tablename)){
+        DBrows <- dbGetQuery(odbcConnect,checkSQL)[1,1]
         message(paste0(DBrows,' records in [',
                        database,'].[dbo].[',tablename,'] currently'))
       } else {
@@ -141,8 +141,8 @@ sql_write <- function(x,
 
         message(paste('Start data upload',timeStart))
 
-        DBI::dbWriteTable(conn = odbcConnect,
-                          name = DBI::Id(schema = 'dbo',
+        dbWriteTable(conn = odbcConnect,
+                          name = Id(schema = 'dbo',
                                          table   = tablename),
                           value = x,
                           encoding = 'latin1',
@@ -151,7 +151,7 @@ sql_write <- function(x,
         )
 
         ## perform the check after the upload for the while loop
-        DBrows <- DBI::dbGetQuery(odbcConnect,checkSQL)[1,1]
+        DBrows <- dbGetQuery(odbcConnect,checkSQL)[1,1]
 
       }
 
@@ -172,5 +172,5 @@ sql_write <- function(x,
   }
 
   # close the connection
-  DBI::dbDisconnect(odbcConnect)
+  dbDisconnect(odbcConnect)
 }
