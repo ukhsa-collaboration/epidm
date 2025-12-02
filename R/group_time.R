@@ -11,7 +11,7 @@
 #'  These are commonly used with inpatient HES/SUS data to group spells with
 #'  defined start and end dates,  or to group positive specimen tests,
 #'  based on specimen dates together into infection episodes.
-#'  
+#'
 #'
 #' @import data.table
 #'
@@ -28,10 +28,10 @@
 #'   grouping method should be used when grouping *events*.
 #'   A *'static'* window will identify the first event, and all records X days
 #'   from that event will be attributed to the same episode. Eg. in a 14 day
-#'   window, if first event is on 01 Mar, and events on day 7 Mar and 14 Mar will be 
+#'   window, if first event is on 01 Mar, and events on day 7 Mar and 14 Mar will be
 #'   grouped, but an event starting 15 Mar days after will start a new episode.
-#'   A *'rolling'* window resets the day counter with each new event. Eg. 
-#'   Events on 01 Mar, 07 Mar, 14 Mar and 15 Mar are all included in a single episode, 
+#'   A *'rolling'* window resets the day counter with each new event. Eg.
+#'   Events on 01 Mar, 07 Mar, 14 Mar and 15 Mar are all included in a single episode,
 #'   as will any additional events up until the 29 Mar (assuming a 14-day window).
 #'
 #' @param indx_varname a character string to set variable name for the
@@ -134,14 +134,27 @@ group_time <- function(x,
                        .forceCopy = FALSE
 ){
 
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # indx <-
-  #   tmp.dateNum <-
-  #   max_date <- min_date <-
-  #   tmp.episode <- tmp.windowEnd <- tmp.windowStart <- tmp.windowCmax <-
-  #   NULL
+
+  if (!is.data.frame(x) && !data.table::is.data.table(x)) {
+    stop("'x' must be a data.frame or data.table")
+  }
+
+  if (!date_start %in% names(x)) stop(paste("Column", date_start, "not found in x"))
+
+  if (!missing(date_end) && !date_end %in% names(x)) stop(paste("Column", date_end, "not found in x"))
+
+  if (!all(group_vars %in% names(x))) stop("Some group_vars not found in x")
+
+  if (!is.numeric(window) || window <= 0) stop("'window' must be a positive numeric value")
+
+  if (!window_type %in% c("rolling", "static")) stop("'window_type' must be 'rolling' or 'static'")
+
+  if (!inherits(x[[date_start]], "Date")) stop(paste(date_start, "must be of class Date"))
+
+  if (sum(!is.na(x[[date_start]])) == 0) {
+    warning("No valid rows with non-NA start dates; returning original data.")
+    return(x)
+  }
 
   ## convert data.frame to data.table or take a copy
   if(.forceCopy) {
