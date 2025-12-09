@@ -18,7 +18,7 @@ A convenience function to allow you to pull data from NHS, ONS and ODR assets
 }
 \examples{
 \dontrun{
-read.csv(csv_from_zip("https://files.digital.nhs.uk/assets/ods/current/succarc.zip"))
+read.csv(csv_from_zip("https://files.digital.nhs.uk/assets/ods/current/pcodeall.zip"))
 }
 
 }

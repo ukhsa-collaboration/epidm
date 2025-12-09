@@ -164,10 +164,14 @@ uk_patient_id <- function(data,
                           .forceCopy = FALSE) {
 
   ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(data)) {
+    stop(force_copy_error)
+  }
+
   if(.forceCopy) {
-    x <- data.table::setDT(data.table::copy(data))
+    x <- data.table::copy(x)
   } else {
-    x <- data.table::setDT(data)
+    data.table::setDT(x)
   }
 
   ## allow a forced sort order; but not necessary

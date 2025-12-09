@@ -29,7 +29,14 @@ provided quoted}
 applied to the start date for grouping \emph{events}}
 
 \item{window_type}{character, to determine if a 'rolling' or 'static'
-grouping method should be used when grouping \emph{events}}
+grouping method should be used when grouping \emph{events}.
+A \emph{'static'} window will identify the first event, and all records X days
+from that event will be attributed to the same episode. Eg. in a 14 day
+window, if first event is on 01 Mar, and events on day 7 Mar and 14 Mar will be
+grouped, but an event starting 15 Mar days after will start a new episode.
+A \emph{'rolling'} window resets the day counter with each new event. Eg.
+Events on 01 Mar, 07 Mar, 14 Mar and 15 Mar are all included in a single episode,
+as will any additional events up until the 29 Mar (assuming a 14-day window).}
 
 \item{group_vars}{in a vector, the all columns used to group records, quoted}
 
