@@ -76,6 +76,10 @@ proxy_episode_dates <- function(x,
 
 
   ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(data)) {
+    stop(force_copy_error)
+  }
+
   if(.forceCopy) {
     x <- data.table::copy(x)
   } else {

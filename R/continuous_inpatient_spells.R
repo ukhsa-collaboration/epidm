@@ -131,6 +131,11 @@ cip_spells <- function(x,
   }
 
   ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(data)) {
+    stop(force_copy_error)
+  }
+
+  ## convert data.frame to data.table or take a copy
   if(.forceCopy) {
     x <- data.table::copy(x)
   } else {

@@ -110,3 +110,8 @@ utils::globalVariables(
     'tmp.valid.n.swap'
   )
 )
+
+force_copy_error <-
+  "When '.forceCopy = TRUE', the input must be a data.table. Convert before calling (e.g. data.table::setDT(data)) or pass a data.table object."
+
+

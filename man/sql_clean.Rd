@@ -28,5 +28,4 @@ testSQL <- c(
 "FROM DATASET ","-- output here")
 sql_clean(testSQL)
 
-
 }

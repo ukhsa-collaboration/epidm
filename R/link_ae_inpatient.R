@@ -342,6 +342,10 @@ link_ae_inpatient <- function(
     stop(paste("Missing required fields in 'inp':", paste(missing_inp, collapse = ", ")))
   }
 
+  ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(data)) {
+    stop(force_copy_error)
+  }
 
   if (.forceCopy) {
     inp$data <- data.table::copy(inp$data)
