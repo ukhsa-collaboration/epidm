@@ -3,18 +3,21 @@
 #' @description
 #' `r lifecycle::badge('experimental')`
 #'
+#' Reshapes a wide HES/SUS inpatient table into a long format containing either:
+#'   * Diagnosis codes (ICD-9 or ICD-10), or
+#'   * Procedure codes (OPCS) (optionally) paired with their dates.
 #'
-#' Converts inpatient episode data (HES/SUS/OPCD) from wide format (multiple diagnosis or procedure columns)
-#' into a long format for easier analysis. Handles ICD-9, ICD-10, and OPCS codes, optionally
-#' pairing procedure codes with their dates.
+#' Codes are de-duplicated so that each code appears only once per patient spell.
+#' Severity or importance is inferred by the original column order within the episode:
+#'   * Primary diagnosis/procedure first,
+#'   * Secondary codes follow in their original index order.
 #'
 #' @details
 #' * For `type = "icd9"` or `"icd10"`, only diagnosis code columns are reshaped.
-#' * For `type = "opcs"`, both procedure codes and dates are reshaped in paired order.
+#' * For `type = "opcs"`, both procedure codes and (optionally) dates are reshaped in paired order.
 #' * All codes are truncated to the first 4 characters (subcodes removed).
 #'
 #' @import data.table
-#'
 #'
 #' @param x A `data.frame` or `data.table` containing inpatient data. Must have ≥1 row
 #' @param field_strings Character vector of regex patterns used to select columns:
@@ -234,10 +237,6 @@ inpatient_codes <- function(x,
     warning("For type '", type, "' only the first element of `field_strings` will be used.")
     field_strings <- field_strings[1L]
   }
-  if (type == "opcs" && length(field_strings) < 2L) {
-    stop("For type 'opcs', `field_strings` must contain TWO patterns: one for codes and one for dates.",
-         call. = FALSE)
-  }
 
   # .forceCopy
   if (!is.logical(.forceCopy) || length(.forceCopy) != 1L || is.na(.forceCopy)) {
@@ -258,51 +257,52 @@ inpatient_codes <- function(x,
       stop("No columns in `x` matched the pattern `field_strings[1]` ('",
            field_strings[1], "').", call. = FALSE)
     }
+
     sel <- unique(c(patient_id_vars, fields))
+
   } else { # type == "opcs"
-    fields <- grep(field_strings[1], names(x), ignore.case = TRUE, value = TRUE)
-    dates  <- grep(field_strings[2], names(x), ignore.case = TRUE, value = TRUE)
-    if (length(fields) == 0L) {
-      stop("No procedure CODE columns matched pattern '", field_strings[1], "'.", call. = FALSE)
-    }
+
+  # codes are mandatory
+  fields <- grep(field_strings[1], names(x), ignore.case = TRUE, value = TRUE)
+
+  if (length(fields) == 0L) {
+    stop("No procedure CODE columns matched pattern '", field_strings[1], "'.", call. = FALSE)
+  }
+
+  # dates are optional but if user supplies a date pattern, warn when it fails
+  dates <- character(0)
+
+  if (length(field_strings) >= 2L) {
+
+    dates <- grep(field_strings[2], names(x), ignore.case = TRUE, value = TRUE)
+
+
     if (length(dates) == 0L) {
-      stop("No procedure DATE columns matched pattern '", field_strings[2], "'.", call. = FALSE)
+
+      # Warn when a date pattern is supplied but matches nothing
+      warning(
+        "OPCS date pattern '", field_strings[2],
+        "' matched 0 columns. Proceeding WITHOUT dates."
+      )
+
+      # keep dates empty -> codes-only path
+    } else if (length(dates) != length(fields)) {
+
+      # Warn when counts are unpaired; proceed without dates
+      warning(
+        "OPCS date columns were detected but do not pair 1:1 with code columns ",
+        "(codes=", length(fields), ", dates=", length(dates), "). Proceeding WITHOUT dates."
+      )
+      dates <- character(0)
     }
-    if (length(fields) != length(dates)) {
-      stop("For 'opcs', the number of code columns (", length(fields),
-           ") must equal the number of date columns (", length(dates), "). ",
-           "Please ensure patterns select paired columns (e.g., *_code_1 with *_date_1).",
-           call. = FALSE)
-    }
-    sel <- unique(c(patient_id_vars, fields, dates))
   }
 
 
-  ## convert object if its not already
-  if(.forceCopy) {
-    x <- data.table::copy(x)
-  } else {
-    data.table::setDT(x)
-  }
+  sel <- unique(c(patient_id_vars, fields, dates))
 
-  ## Capture the fields of interest
-  ## WHEN icd is selected, the df will just have the codes
-  if(type %in% c('icd9','icd10')){
-    fields <- grep(field_strings[1],colnames(x),ignore.case=TRUE,value=TRUE)
-    sel <- c(patient_id_vars,fields)
-  }
+}
 
-  ## WHEN opcs is selected the df will have a date and a procedural code
-  if(type=='opcs'){
-    fields <- grep(field_strings[1],colnames(x),ignore.case=TRUE,value=TRUE)
-    dates <- grep(field_strings[2],colnames(x),ignore.case=TRUE,value=TRUE)
-    sel <- c(patient_id_vars,fields,dates)
-  }
-
-
-  ## Create a vector of the chosen column names
-  ## Use the .. syntax to select the items within the vector
-  ## Reassignment is required to subset the columns
+  ## Subset to selected column
   x <- x[,..sel]
 
   ## icd10 and opcs are 4digit codes, so the strings are trimmed as we dont need the subcodes
@@ -313,7 +313,8 @@ inpatient_codes <- function(x,
 
 
   if(type %in% c('icd9','icd10')){
-    ## Reshape the data from wide to long for easier data maniplulation
+
+    ## Reshape the data from wide to long for easier data manipulation
     x <- data.table::melt(
       data = x,
       id.vars = patient_id_vars,
@@ -331,26 +332,76 @@ inpatient_codes <- function(x,
     order_n := seq_len(.N),
     by = c(eval(patient_id_vars))
     ]
-  }
-  if(type=='opcs'){
-    ## Separate the dates and codes for each patient ID
-    x <- data.table::melt(
-      data = x,
-      id.vars = patient_id_vars,
-      measure = list(fields,dates),
-      variable.name = 'order_n',
-      value.name = c(type,'date'),
-      na.rm = TRUE,
-      variable.factor = FALSE
-    )
-
-    ## Oder the dataset, makes your life easier
-    setorderv(x,c(eval(patient_id_vars),'date','order_n'))
-  }
 
   ## Drop duplicates
   x <- unique(x,
               by = c(eval(patient_id_vars),type))
+
+  } else if(type=='opcs'){
+
+    if (length(dates)) {
+
+      # With dates
+      x <- data.table::melt(
+        data = x,
+        id.vars = patient_id_vars,
+        measure = list(fields, dates),
+        variable.name = "order_n",
+        value.name = c(type, "date"),
+        na.rm = TRUE,
+        variable.factor = FALSE
+      )
+
+      # Parsing of common date formats
+      # If 'date' is already Date/IDate, we leave in current format.
+      if (!inherits(x$date, "IDate") && !inherits(x$date, "Date")) {
+
+        formats <- c("%Y%m%d", "%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y",
+                     "%m/%d/%Y", "%m-%d-%Y")
+
+        # Try formats in order
+        parsed <- NULL
+
+        for (f in formats) {
+
+          candidate <- suppressWarnings(data.table::as.IDate(x$date, format = f))
+
+          if (any(!is.na(candidate))) { parsed <- candidate; break }
+
+        }
+
+        # If none produce any non-NA, keep the original character vector
+        if (!is.null(parsed)) x[, date := parsed]
+
+      }
+
+      data.table::setorderv(x, c(patient_id_vars, "date", "order_n"))
+
+      # De-duplicate; keep same code on different dates
+      x <- unique(x, by = c(patient_id_vars, type, "date"))
+
+      } else {
+
+        # Without dates: melt codes only
+        x <- data.table::melt(
+          data = x,
+          id.vars = patient_id_vars,
+          measure.vars = fields,
+          variable.name = "order_n",
+          value.name = type,
+          na.rm = TRUE,
+          variable.factor = FALSE
+        )
+
+        x[, order_n := match(order_n, fields)]
+
+        data.table::setorderv(x, c(patient_id_vars, "order_n"))
+
+        # Deduplicate per spell/patient on code only
+        x <- unique(x, by = c(patient_id_vars, type))
+
+      }
+    }
 
   return(x)
 
