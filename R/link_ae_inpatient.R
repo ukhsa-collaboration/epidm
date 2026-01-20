@@ -585,6 +585,9 @@ link_ae_inpatient <- function(
 
   link[, (rmcols) := NULL]
 
+  # Remove exact duplicates across all columns
+  link <- unique(link)
+
   # Get cols names required from original ae df
   cols <- as.vector(unlist(lapply(ae[c(3:length(ae))],`[[`,1)))
 
