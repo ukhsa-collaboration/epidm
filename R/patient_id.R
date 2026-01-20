@@ -3,23 +3,37 @@
 #' @description
 #' `r lifecycle::badge('stable')`
 #'
-#'
-#' Groups patient records from multiple isolates with a single integer patientID
-#' by grouping patient identifiers.
-#'
-#' Grouping is based on the following stages:
+#' Assigns a **single integer `id`** to records that belong to the same patient by
+#' applying a sequence of **deterministic matching stages** across common identifiers
+#' (NHS number, hospital number, DOB, name, sex, postcode). Identifiers are
+#' standardised, validated using NHS checksum function, and fuzzy name keys are
+#' used in later stages.
+#''
+#' Matching is performed in order through the following stages (first match is applied):
 #' \enumerate{
-#' \item matching nhs number and date of birth
-#' \item Hospital number &  Date of Birth
-#' \item NHS number & Hospital Number
-#' \item NHS number & Name
-#' \item Hospital number & Name
-#' \item Sex & Date of Birth & Surname
-#' \item Sex & Date of Birth & Fuzzy Name
-#' \item Sex & Year and Month of Birth & Fuzzy Name
-#' \item Postcode & Name
-#' \item Name Swaps (when first and last name are the wrong way around)
+#'   \item NHS number + date of birth
+#'   \item Hospital number + date of birth
+#'   \item NHS number + hospital number
+#'   \item NHS number + surname
+#'   \item Hospital number + surname
+#'   \item Date of birth + surname (only where NHS is invalid/absent)
+#'   \item Sex + full name (forename + surname)
+#'   \item Sex + date of birth + fuzzy name (Soundex; surname + initial)
+#'   \item Date of birth (YYYY-MM) + fuzzy name
+#'   \item Surname/forename + postcode
+#'   \item Name swaps (forename/surname reversed) + date of birth
 #' }
+#'
+#' Use `.useStages` to restrict which stages are applied (default: `1:11`).
+#' The function generates a reproducible `id` per patient within the sort order;
+#' you can provide `.sortOrder` (e.g., a date column) to make assignment deterministic.
+#'
+#' **Validity rules applied:**
+#' - **NHS number** validated using the standard checksum (`epidm::valid_nhs()`).
+#' - **Hospital number**: excludes known placeholders (e.g., `"UNKNOWN"`, `"NO PATIENT ID"`).
+#' - **DOB**: excludes proxy or missing dates (`"1900-01-01"`, `"1800-01-01"`, `NA`).
+#' - **Sex**: normalised to `"M"` / `"F"`; others → `NA`.
+#' - **Names**: uppercased, Latin characters normalised; Soundex used for fuzzy matching.
 #'
 #' Identifiers are copied over where they are missing or invalid to the grouped
 #' records.
@@ -40,6 +54,24 @@
 #'    \item{`surname`}{the patient surname}
 #'    \item{`postcode`}{the patient postcode}
 #'   }
+#'
+#' @section Workflow context:
+#' `uk_patient_id()` is typically used early to harmonise patient identity
+#' across isolates before downstream tasks such as specimen episode grouping
+#' (`group_time()`), dataset linkage (e.g., to HES/SUS/ECDS), and
+#' epidemiological reporting.
+#'
+#' @param data A `data.frame` or `data.table` with patient identifiers.
+#' @param id A **named list** of quoted column names:
+#' \describe{
+#'   \item{`nhs_number`}{NHS number.}
+#'   \item{`hospital_number`}{Local patient identifier (hospital number).}
+#'   \item{`date_of_birth`}{Date of birth.}
+#'   \item{`sex_mfu`}{Sex/gender (M/F/Unknown).}
+#'   \item{`forename`}{Forename / first name.}
+#'   \item{`surname`}{Surname / last name.}
+#'   \item{`postcode`}{Patient postcode.}
+#' }
 #' @param .sortOrder optional; a column as a character to allow a sorting
 #'   order on the id generation
 #' @param .keepValidNHS optional, default FALSE; set TRUE if you wish to retain
@@ -61,12 +93,11 @@
 #' set to 11 if you wish patient ID to be assigned cases with the same first name
 #' or second name in changing order and date of birth.
 #'
-#'
-#' @return A dataframe with one new variable:
+#' @return
+#' A `data.table` with the original columns plus:
 #' \describe{
-#'   \item{`id`}{a unique patient id}
-#'   \item{`valid_nhs`}{if retained using argument `.keepValidNHS=TRUE`, a
-#'     BOOLEAN containing the result of the NHS checksum validation}
+#'   \item{`id`}{Integer patient identifier assigned by staged matching.}
+#'   \item{`valid_nhs`}{(Optional) BOOLEAN NHS checksum flag; included when `.keepValidNHS = TRUE`.}
 #' }
 #'
 #' @examples

@@ -1,44 +1,60 @@
-#' Link A&E to Inpatient records
+#' Link A&E (ECDS) records to Inpatient (HES/SUS) spells
 #'
 #' @description
 #' `r lifecycle::badge('experimental')`
 #'
-#'
-#' Link together ECDS A&E records to HES/SUS inpatient records on
-#'   NHS number, Hospital Number and Date of Birth and organisation code.
-#'   To note that the inpatient records should already be aggregated into
-#'   spells at the desired level (standard, CIP or Mega)
+#' Links Emergency Care Data Set (ECDS) **A&E records** to **inpatient spells**
+#' (HES/SUS) using patient identifiers (NHS number, hospital number, date of birth),
+#' organisation code, and a **link date**. The inpatient records should already be
+#' aggregated to the desired spell level (e.g., provider spell, CIP, or “mega” spell).
+#' The output is a patient-level linked table suitable for downstream pathway analysis.
 #'
 #' @seealso group_time continuous_inpatient_spells
 #'
+#' @section Workflow context (concise):
+#' Use `link_ae_inpatient()` **after**:
+#' - ECDS A&E data are cleaned/standardised (e.g., discharge categories via `lookup_recode()`).
+#' - Inpatient records have been **aggregated to spells** (e.g., `cip_spells()` for continuous inpatient spells).
+#'
+#' Use it **before**:
+#' - Rejoining to SGSS infection episodes (e.g., outputs of `group_time()`),
+#'   or deriving `hospital_in_out_dates` for entry/exit timelines.
+#'
 #' @import data.table
 #'
-#' @param ae a list to provide data and columns for the A&E (ECDS) data; all arguments provided quoted unless specified
-#'  \describe{
-#'    \item{`data`}{the ECDS A&E dataset provided unquoted}
-#'    \item{`record_id`}{a unique id within the dataset to be retained; optional}
-#'    \item{`arrival_date`}{the ECDS arrival date}
-#'    \item{`departure_date`}{the ECDS discharge date}
-#'    \item{`nhs_number`}{the patient NHS number}
-#'    \item{`hospital_number`}{the patient Hospital numbers also known as the local patient identifier}
-#'    \item{`patient_dob`}{patient date of birth}
-#'    \item{`org_code`}{the NHS trust organisation codes}
-#'   }
-#' @param inp a list to provide data and columns for the inpatient (SUS/HES) data
-#'   \describe{
-#'   \item{`data`}{the HES/SUS inpatient dataset provided unquoted}
-#'    \item{`record_id`}{a unique id within the dataset to be retained; optional}
-#'   \item{`spell_start_date`}{a string containing the inpatient (SUS/HES) admission date column name; all arguments provided quoted unless specified}
-#'   \item{`spell_id`}{the HES/SUS spell id}
-#'   \item{`nhs_number`}{the patient NHS number}
-#'   \item{`hospital_number`}{the patient Hospital numbers also known as the local patient identifier}
-#'   \item{`patient_dob`}{patient date of birth}
-#'   \item{`org_code`}{the NHS trust organisation codes}
-#'   }
-#' @param .forceCopy a boolean to control if you want to copy the dataset before
-#'   linking together
+#' @param ae A named **list** describing the A&E (ECDS) input with quoted column names:
+#' \describe{
+#'   \item{`data`}{ECDS A&E dataset (unquoted object).}
+#'   \item{`record_id`}{Optional unique row id to retain.}
+#'   \item{`arrival_date`}{A&E arrival date column.}
+#'   \item{`departure_date`}{A&E departure date column.}
+#'   \item{`nhs_number`}{NHS number column.}
+#'   \item{`hospital_number`}{Local patient identifier column.}
+#'   \item{`patient_dob`}{Date of birth column.}
+#'   \item{`org_code`}{Provider organisation code column.}
+#' }
 #'
-#' @return a patient level linked hospital record
+#' @param inp A named **list** describing the inpatient (HES/SUS) input with quoted column names:
+#' \describe{
+#'   \item{`data`}{Inpatient dataset (unquoted object).}
+#'   \item{`record_id`}{Optional unique row id to retain.}
+#'   \item{`spell_start_date`}{Inpatient spell start/admission date column.}
+#'   \item{`spell_id`}{Spell identifier to carry through (e.g., CIP or mega spell id).}
+#'   \item{`nhs_number`}{NHS number column.}
+#'   \item{`hospital_number`}{Local patient identifier column.}
+#'   \item{`patient_dob`}{Date of birth column.}
+#'   \item{`org_code`}{Provider organisation code column.}
+#' }
+#'
+#' @param .forceCopy Logical; if `TRUE`, copies inputs before processing (avoid
+#' in‑place modification). Default `FALSE`.
+#'
+#' @return
+#' A **linked `data.table`** at **patient/spell level** containing:
+#' - Harmonised identifiers (NHS number / hospital number, DOB, org code)
+#' - A&E arrival/departure dates
+#' - Inpatient spell identifiers and spell start date
+#' - (If supplied) preserved `record_id` columns (tagged `*_ae` / `*_inp`)
 #'
 #' @keywords internal
 #' @examples

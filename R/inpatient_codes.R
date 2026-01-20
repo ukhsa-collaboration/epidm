@@ -1,26 +1,38 @@
-#' Inpatient Codes cleanup
+#' Inpatient codes cleanup (reshape and standardise)
 #'
 #' @description
 #' `r lifecycle::badge('experimental')`
 #'
+#' Utility function to reshape **wide HES/SUS diagnosis (ICD-9/ICD-10)** and **procedure (OPCS)**
+#' columns into a **long**, analysis‑ready table. It selects columns by regex,
+#' trims codes to their 4‑character stem, and returns a de‑duplicated long table
+#' keyed by patient/spell identifiers.
 #'
-#' When HES/SUS ICD/OPCS codes are provided in wide format
-#'   you may want to clean them up into long for easier analysis.
-#'   This function helps by reshaping long as a separate table.
-#'   Ensuring they're separate allows you to retain source data, and aggregate
-#'   appropriately later.
+#' @section Workflow context:
+#' - **HES/SUS processing**: After SQL union/joins to SGSS data and optional `lookup_recode()` for
+#'   admission/discharge groupings, call `inpatient_codes()` to normalise diagnosis and
+#'   procedure fields to long form for easier linkage to spells and clinical indicators.
 #'
 #' @import data.table
 #'
+#' @param x A `data.frame` or `data.table` containing inpatient records.
+#' @param field_strings A character vector of regex patterns used to select columns:
+#'   - For `type = 'icd9'` or `'icd10'`: length 1 (diagnosis code columns).
+#'   - For `type = 'opcs'`: length 2 (first for *_code columns, second for *_date columns).
+#' @param patient_id_vars Character vector of column names that uniquely identify a
+#'   patient episode or spell (e.g., `c('id','spell_id')`). These are kept as keys.
+#' @param type One of `c('icd9','icd10','opcs')`. Controls selection and reshape logic.
+#' @param .forceCopy Logical; if `TRUE`, forces a copy before mutation. Default `FALSE`.
 #'
-#' @param x a data.frame or data.table containing inpatient data
-#' @param field_strings a vector or string containing the regex for the the columns
-#' @param patient_id_vars a vector containing colnames used to identify a patient episode or spell
-#' @param type a string to denote if the codes are diagnostic or procedural
-#' @param .forceCopy default FALSE; TRUE will force data.table to take a copy
-#'   instead of editing the data without reference
-#'
-#' @return a separate table with codes and id in long form
+#' @return
+#' A **long `data.table`** with:
+#' \describe{
+#'   \item{patient_id_vars}{All identifiers passed in `patient_id_vars`.}
+#'   \item{order_n}{Integer indicating the original column position (primary/secondary order).}
+#'   \item{`icd9`/`icd10`}{For diagnosis modes: 4‑char code stem.}
+#'   \item{`opcs`, `date`}{For procedure mode: 4‑char OPCS code stem and its date.}
+#' }
+#' Rows are de‑duplicated by `(patient_id_vars, code column)`.
 #'
 #' @examples
 #' inpatient_test <- data.frame(

@@ -1,16 +1,71 @@
-#'
-#' @title Grouping of intervals or events in time together
+#' @title Grouping of intervals or events that occur close together in time
 #'
 #' @description
 #' `r lifecycle::badge('stable')`
 #'
+#' A utility function to group together observations that represent
+#' **overlapping date intervals** (e.g., hospital admission spells) or
+#' **events occurring within a defined time window** e.g., specimen dates
+#' grouped into infection episodes. The function supports both:
 #'
-#' Group across multiple observations of
-#'  overlapping time intervals, with defined start and end dates,
-#'  or events within a static/fixed or rolling window of time.
-#'  These are commonly used with inpatient HES/SUS data to group spells with
-#'  defined start and end dates,  or to group positive specimen tests,
-#'  based on specimen dates together into infection episodes.
+#' • **Interval-based grouping**: records have a start and an end date; any
+#'   overlapping intervals are grouped together.
+#' • **Event-based grouping**: records have only a start date and are grouped
+#'   using either a *static* or *rolling* time window.
+#'
+#' The output provides a unique index per group and the minimum/maximum date that
+#' define the resulting aggregated episode or interval.
+#'
+#' @details
+#' ## How the function works
+#'
+#' The behaviour depends on whether `date_end` is supplied:
+#'
+#' ### 1. **Interval-based grouping (start + end dates)**
+#' If both `date_start` and `date_end` are provided, the function identifies
+#' overlapping intervals within the same `group_vars` grouping. Any intervals
+#' that overlap are combined into a single episode.
+#'
+#' This method is typically used for:
+#' - Hospital spells (HES/SUS)
+#' - Contact periods or inpatient stays
+#'
+#' ### 2. **Event-based grouping (single-date events)**
+#' If only `date_start` is supplied, records are grouped using a **time window**
+#' defined by the `window` argument.
+#'
+#' Two approaches are supported:
+#'
+#' - **`window_type = "static"`**
+#'   A fixed window is applied starting from the first event in the group. All
+#'   events occurring within the window are grouped until a gap exceeds the
+#'   threshold, at which point a new episode begins.
+#'
+#' - **`window_type = "rolling"`**
+#'   A dynamic window where each event extends the episode end point. An event
+#'   is grouped as long as it occurs within `window` days of the most recent
+#'   event in the same episode.
+#'
+#' ## Handling of missing values
+#' Records missing `date_start` cannot be grouped and are returned with `indx`
+#' = `NA`. These rows are appended back to the final output.
+#'
+#' @section Workflow context: how `group_time()` might be used in a pipeline
+#' **1) SGSS specimen data – infection episode grouping (event-based)**
+#' After organism/specimen harmonisation (e.g., via `lookup_recode()`),
+#' `group_time()` groups specimen dates into infection episodes using a defined
+#' time window. This helps identify clusters of related positive tests for the
+#' same patient and organism.
+#'
+#' **2) HES/SUS inpatient data – continuous spell grouping (interval-based)**
+#' When start and end dates of inpatient stays are available, `group_time()`
+#' collapses overlapping intervals into a single continuous hospital spell.
+#' This is used before linking SGSS infection episodes to inpatient activity.
+#'
+#' **3) Integration across datasets**
+#' The outputs from `group_time()` are used downstream to determine whether
+#' infection events fall within or around periods of hospital care,
+#' enabling combined SGSS–HES/SUS–ECDS analyses.
 #'
 #' @import data.table
 #'
@@ -18,25 +73,30 @@
 #' @param group_vars in a vector, the all columns used to group records, quoted
 #' @param date_start column containing the start dates for the grouping,
 #'   provided quoted
+#
+#' @param x A data.frame or data.table containing date variables for grouping.
+#'   Will be converted to a data.table internally.
+#' @param group_vars Character vector of quoted column names used to partition
+#'   the data before grouping.
+#' @param date_start Quoted column name giving the start date for each record.
+#' @param date_end Optional quoted column name giving the end date for interval
+#'   records. When omitted, event-based grouping is used.
+#' @param window Integer (days) defining the grouping threshold for event-based
+#'   methods. Required when `date_end` is missing.
+#' @param window_type Character: `"static"` or `"rolling"`. Determines how
+#'   events are grouped when only a start date is present.
+#' @param indx_varname Name of the output column containing the episode or
+#'   interval index. Default: `"indx"`.
+#' @param min_varname Name of the output column containing the minimum date
+#'   in each grouped episode. Default: `"date_min"`.
+#' @param max_varname Name of the output column containing the maximum date
+#'   in each grouped episode. Default: `"date_max"`.
+#' @param .forceCopy Logical. If `TRUE`, forces a deep copy; otherwise
+#'   `data.table` may modify by reference. Default: `FALSE`.
 #'
-#' @param date_end column containing the end dates for the *interval*, quoted
+#' @return
+#' A `data.table` containing all original columns plus:
 #'
-#' @param window an integer representing a time window in days which will be
-#'   applied to the start date for grouping *events*
-#' @param window_type character, to determine if a 'rolling' or 'static'
-#'   grouping method should be used when grouping *events*
-#'
-#' @param indx_varname a character string to set variable name for the
-#'   index column which provides a grouping key; default is indx
-#' @param min_varname a character string to set variable name for the
-#'   time period minimum
-#' @param max_varname a character string set variable name for the time
-#'   period maximum
-#' @param .forceCopy default FALSE; TRUE will force data.table to take a copy
-#'   instead of editing the data without reference
-#'
-#' @return the original data.frame as a data.table
-#'   with the following new fields:
 #' \describe{
 #'   \item{`indx`; renamed using `indx_varname`}{an id field for the new
 #'     aggregated events/intervals; note that where the `date_start` is NA, an
