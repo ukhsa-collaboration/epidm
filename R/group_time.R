@@ -200,7 +200,7 @@ group_time <- function(x,
   if (!all(group_vars %in% names(x))) stop("Some group_vars not found in x")
 
   ## convert data.frame to data.table or take a copy
-  if (.forceCopy && !data.table::is.data.table(data)) {
+  if (.forceCopy && !data.table::is.data.table(x)) {
     stop(force_copy_error)
   }
 

@@ -1,9 +1,11 @@
 # Load libraries
+
 library(testthat)
 library(data.table)
 library(patrick)
 
 # Sample data for tests
+
 episode_test <- structure(
   list(
     pat_id = c(1L, 1L, 1L, 1L, 2L, 2L, 2L, 1L, 1L, 1L, 1L, 2L, 2L, 2L),
@@ -127,55 +129,97 @@ test_that('group_time renames columns correctly', {
   expect_true('end_date' %in% names(result))
 })
 
-# Parameter combinations for testing
 params_events <- expand.grid(
   window_type = c("rolling", "static"),
   window = c(7, 14),
+  forceCopy = c(FALSE, TRUE),
   stringsAsFactors = FALSE
 )
 
-with_parameters_test_that(
-  "group_time groups events for window_type={window_type}, window={window}",
+patrick::with_parameters_test_that(
+  "group_time groups events as for window_type={window_type}, window={window}, .forceCopy={forceCopy}",
   .cases = params_events,
   {
+
+    input_x <- episode_test
+
+    if (isTRUE(forceCopy)) {
+
+      data.table::setDT(input_x)
+      expect_true(data.table::is.data.table(input_x))
+      input_names_before <- names(input_x)
+
+    } else {
+
+      input_x <- as.data.frame(input_x)
+    }
+
     result <- group_time(
-      x = episode_test,
+      x = input_x,
       date_start = "sp_date",
       window = window,
       window_type = window_type,
       indx_varname = "episode_id",
-      group_vars = c("pat_id", "species", "spec_type")
+      group_vars = c("pat_id", "species", "spec_type"),
+      .forceCopy = forceCopy
     )
 
     expect_s3_class(result, "data.table")
     expect_true("episode_id" %in% names(result))
     expect_false(any(is.na(result$episode_id)))
+
+    if (isTRUE(forceCopy)) {
+      expect_identical(names(input_x), input_names_before)
+    } else {
+
+      expect_true(data.table::is.data.table(input_x))
+    }
+
     got_static <- NULL
     got_rolling <- NULL
 
     if (window_type == "static") {
+
       got_static <- result[!is.na(sp_date),
                            .(n_static = data.table::uniqueN(episode_id)),
-                           by = .(pat_id, species, spec_type)]
-      assign("._last_static", got_static, envir = .GlobalEnv)
+                           by = .(pat_id, species, spec_type)
+      ]
+
+      static_key <- paste0("._last_static_w", window, "_fc", forceCopy)
+      assign(static_key, got_static, envir = .GlobalEnv)
+
     } else {
+
       got_rolling <- result[!is.na(sp_date),
                             .(n_rolling = data.table::uniqueN(episode_id)),
-                            by = .(pat_id, species, spec_type)]
-      assign("._last_rolling", got_rolling, envir = .GlobalEnv)
+                            by = .(pat_id, species, spec_type)
+      ]
+
+      rolling_key <- paste0("._last_rolling_w", window, "_fc", forceCopy)
+      assign(rolling_key, got_rolling, envir = .GlobalEnv)
+
     }
 
-    # When both have been run for a given window, compare
-    if (exists("._last_static", envir = .GlobalEnv) &&
-        exists("._last_rolling", envir = .GlobalEnv)) {
-      s <- get("._last_static", envir = .GlobalEnv)
-      r <- get("._last_rolling", envir = .GlobalEnv)
+    static_key <- paste0("._last_static_w", window, "_fc", forceCopy)
+    rolling_key <- paste0("._last_rolling_w", window, "_fc", forceCopy)
+
+    if (exists(static_key, envir = .GlobalEnv) &&
+        exists(rolling_key, envir = .GlobalEnv)) {
+
+      s <- get(static_key, envir = .GlobalEnv)
+      r <- get(rolling_key, envir = .GlobalEnv)
+
       comp <- merge(s, r, by = c("pat_id", "species", "spec_type"), all = TRUE)
-      # rolling episodes must be <= static episodes per group
+
       expect_true(all(comp$n_rolling <= comp$n_static, na.rm = TRUE))
-      # cleanup for next parameter set
-      rm(list = c("._last_static", "._last_rolling"), envir = .GlobalEnv)
+
+      rm(list = c(static_key, rolling_key), envir = .GlobalEnv)
+
     }
+
+
+    assign("._last_static", got_static, envir = .GlobalEnv)
+    assign("._last_rolling", got_rolling, envir = .GlobalEnv)
   }
 )
 
