@@ -147,7 +147,7 @@
 #'
 #' @export
 
-uk_patient_id <- function(data,
+uk_patient_id <- function(x,
                            id = list(
                              nhs_number = 'nhs_number',
                              hospital_number = 'patient_hospital_number',
@@ -164,8 +164,67 @@ uk_patient_id <- function(data,
                           .forceCopy = FALSE) {
 
   ## convert data.frame to data.table or take a copy
-  if (.forceCopy && !data.table::is.data.table(data)) {
+  if (.forceCopy && !data.table::is.data.table(x)) {
     stop(force_copy_error)
+  }
+
+
+  if (is.null(x) || !inherits(x, c("data.frame", "data.table"))) {
+    stop("`x` must be a data.frame or data.table.", call. = FALSE)
+  }
+
+
+  if (!is.list(id) || is.null(names(id)) || any(names(id) == "")) {
+    stop("`id` must be a named list mapping roles to column names.", call. = FALSE)
+  }
+  if (
+    any(vapply(id, length, integer(1)) != 1L) ||
+    any(!vapply(id, is.character, logical(1)))
+  ) {
+    stop("All entries in `id` must be character scalars (column names).", call. = FALSE)
+  }
+
+  if (!is.numeric(.useStages) || any(is.na(.useStages))) {
+    stop("`.useStages` must be a numeric vector of stage numbers.", call. = FALSE)
+  }
+  .useStages <- unique(as.integer(.useStages))
+  if (any(!(.useStages %in% 1:11))) {
+    stop("`.useStages` can only include integers 1 to 11.", call. = FALSE)
+  }
+
+  if (!is.logical(.keepStages) || length(.keepStages) != 1L) {
+    stop("`.keepStages` must be a single TRUE or FALSE.", call. = FALSE)
+  }
+
+  if (!is.logical(.keepValidNHS) || length(.keepValidNHS) != 1L) {
+    stop("`.keepValidNHS` must be a single TRUE or FALSE.", call. = FALSE)
+  }
+
+  if (!is.logical(.forceCopy) || length(.forceCopy) != 1L) {
+    stop("`.forceCopy` must be a single TRUE or FALSE.", call. = FALSE)
+  }
+
+  if ("id" %in% names(x)) {
+    message(
+      "`x` already contains a column named `id`. Please rename it to avoid overwrite."
+    )
+  }
+
+  referenced_cols <- unique(unlist(id, use.names = FALSE))
+
+  if (!missing(.sortOrder)) {
+
+    if (!is.character(.sortOrder) || length(.sortOrder) < 1L) {
+      stop("`.sortOrder` must be a character vector of one or more column names.", call. = FALSE)
+    }
+
+    missing_sort_cols <- setdiff(.sortOrder, names(x))
+    if (length(missing_sort_cols) > 0) {
+      stop(
+        sprintf("Missing .sortOrder column(s) in `x`: %s", paste(missing_sort_cols, collapse = ", ")),
+        call. = FALSE
+      )
+    }
   }
 
   if(.forceCopy) {
