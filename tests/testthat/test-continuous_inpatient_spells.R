@@ -163,14 +163,13 @@ test_that("CIP spell grouping logic works", {
 
 
 # Parameter combinations
-cases <- cases(
-  id_only_copy_true  = list(forceCopy = TRUE,  group_vars = c("id")),
-  id_only_copy_false = list(forceCopy = FALSE, group_vars = c("id")),
-  idprov_copy_true   = list(forceCopy = TRUE,  group_vars = c("id", "provider")),
-  idprov_copy_false  = list(forceCopy = FALSE, group_vars = c("id", "provider"))
+cases <- expand.grid(
+  group_vars = c("id", "provider"),
+  forceCopy = c(FALSE, TRUE),
+  stringsAsFactors = FALSE
 )
 
-with_parameters_test_that(
+patrick::with_parameters_test_that(
   "Handles parameter combinations",
   .cases = cases,
   .interpret_glue = FALSE,

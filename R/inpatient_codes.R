@@ -188,7 +188,7 @@ inpatient_codes <- function(x,
                             .forceCopy=FALSE) {
 
   ## convert data.frame to data.table or take a copy
-  if (.forceCopy && !data.table::is.data.table(data)) {
+  if (.forceCopy && !data.table::is.data.table(x)) {
     stop(force_copy_error)
   }
 
