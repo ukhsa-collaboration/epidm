@@ -85,7 +85,6 @@ proxy_episode_dates <- function(x,
     stop("`.dropTmp` must be a single TRUE/FALSE value.")
   }
 
-  # ADDED: validate scalar logical flags early
   if (!is.logical(.forceCopy)) {
     stop("`.forceCopy` must be a single TRUE/FALSE value.")
   }

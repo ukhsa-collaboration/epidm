@@ -60,17 +60,6 @@ respeciate_generic <- function(x,
                                .forceCopy = FALSE
                                ) {
 
-  ## convert data.frame to data.table or take a copy
-  if (.forceCopy && !data.table::is.data.table(x)) {
-    stop(force_copy_error)
-  }
-
-  if(.forceCopy) {
-    x <- data.table::copy(x)
-  } else {
-    data.table::setDT(x)
-  }
-
   # Error handling
 
   # Validate input columns
@@ -99,6 +88,21 @@ respeciate_generic <- function(x,
   # Warning about missing dates
   if (anyNA(x[[date_col]])) {
     warning("There are missing values in date column. Results may be affected.")
+  }
+
+  if (!is.logical(.forceCopy)) {
+    stop("`.forceCopy` must be a single TRUE/FALSE value.")
+  }
+
+  ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(x)) {
+    stop(force_copy_error)
+  }
+
+  if(.forceCopy) {
+    x <- data.table::copy(x)
+  } else {
+    data.table::setDT(x)
   }
 
   # Normalising species names

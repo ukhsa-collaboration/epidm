@@ -267,5 +267,39 @@ test_that("respeciation never crosses genus boundaries, even with mixed genera",
   )
 })
 
+test_that(".forceCopy behaves as expected", {
+
+  df_before <- df_respeciate
+  df_respeciate_df <- data.table::setDT(df_respeciate)
+  result_force <- respeciate_generic(
+    x = df_respeciate_df,
+    group_vars = c("ptid", "type"),
+    species_col = "spec",
+    date_col = "specdate",
+    window = 7,
+    .forceCopy = TRUE
+  )
+  expect_equal(df_before, df_respeciate_df)
+
+})
+
+test_that("errors when .forceCopy is not a single logical", {
+
+  df_respeciate_df <- data.table::setDT(df_respeciate)
+
+  expect_error(
+    respeciate_generic(
+      x = df_respeciate_df,
+      group_vars = c("ptid", "type"),
+      species_col = "spec",
+      date_col = "specdate",
+      window = 7,
+      .forceCopy = "no"
+    ),
+    "`.forceCopy` must be a single TRUE/FALSE value.",
+    fixed = TRUE
+  )
+})
+
 
 
