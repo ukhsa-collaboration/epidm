@@ -28,7 +28,11 @@
 #'   discharge date.
 #' @param discharge_destination CDS discharge destination code.
 #' @param patient_classification CDS patient classification code.
-#' @param .forceCopy Logical; if `TRUE`, forces a copy of `x`. Default `FALSE`.
+#' @param .forceCopy Logical (default `FALSE`).
+#'   If `FALSE`, the input is converted to a `data.table` and modified by
+#'   reference.
+#'   If `TRUE`, the input must already be a `data.table`, and the function will
+#'   create an explicit copy to avoid modifying the original object.
 #'
 #' @return
 #' A `data.table` containing the original data and three new variables:

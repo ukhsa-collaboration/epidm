@@ -46,8 +46,11 @@
 #'   \item{`org_code`}{Provider organisation code column.}
 #' }
 #'
-#' @param .forceCopy Logical; if `TRUE`, copies inputs before processing (avoid
-#' in‑place modification). Default `FALSE`.
+#' @param .forceCopy Logical (default `FALSE`).
+#'   If `FALSE`, the input is converted to a `data.table` and modified by
+#'   reference.
+#'   If `TRUE`, the input must already be a `data.table`, and the function will
+#'   create an explicit copy to avoid modifying the original object.
 #'
 #' @return
 #' A **linked `data.table`** at **patient/spell level** containing:

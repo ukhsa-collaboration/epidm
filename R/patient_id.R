@@ -76,8 +76,11 @@
 #'   order on the id generation
 #' @param .keepValidNHS optional, default FALSE; set TRUE if you wish to retain
 #'   the column with the NHS checksum result stored as a BOOLEAN
-#' @param .forceCopy optional, default FALSE; TRUE will force data.table to take a copy
-#'   instead of editing the data without reference
+#' @param .forceCopy Logical (default `FALSE`).
+#'   If `FALSE`, the input is converted to a `data.table` and modified by
+#'   reference.
+#'   If `TRUE`, the input must already be a `data.table`, and the function will
+#'   create an explicit copy to avoid modifying the original object.
 #' @param .useStages optional, default 1:11; set to 1 if you wish patient ID to
 #' be assigned cases with the same DOB and NHS number, set to 2 if you wish patient
 #' ID to be assigned to cases with the same hospital number (HOS) and DOB, set to

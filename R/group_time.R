@@ -91,8 +91,11 @@
 #'   in each grouped episode. Default: `"date_min"`.
 #' @param max_varname Name of the output column containing the maximum date
 #'   in each grouped episode. Default: `"date_max"`.
-#' @param .forceCopy Logical. If `TRUE`, forces a deep copy; otherwise
-#'   `data.table` may modify by reference. Default: `FALSE`.
+#' @param .forceCopy Logical (default `FALSE`).
+#'   If `FALSE`, the input is converted to a `data.table` and modified by
+#'   reference.
+#'   If `TRUE`, the input must already be a `data.table`, and the function will
+#'   create an explicit copy to avoid modifying the original object.
 #'
 #' @return
 #' A `data.table` containing all original columns plus:
