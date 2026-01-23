@@ -19,7 +19,7 @@
 #'
 #' - **`genus_gram_stain`**: Uses the `genus_gram_stain` lookup table, which
 #'   provides Gram stain classifications by bacterial genus. This reference is
-#'   manually maintained against the PHE SGSS database and supports rapid
+#'   manually maintained against the UKHSA SGSS database and supports rapid
 #'   filtering and high‑level organism categorisation. Users should raise an
 #'   issue or submit a pull request to the `epidm` GitHub repository if
 #'   an organism/genus is missing.
