@@ -11,7 +11,7 @@
 #'
 #' @seealso group_time continuous_inpatient_spells
 #'
-#' @section Workflow context (concise):
+#' @section Workflow context:
 #' Use `link_ae_inpatient()` **after**:
 #' - ECDS A&E data are cleaned/standardised (e.g., discharge categories via `lookup_recode()`).
 #' - Inpatient records have been **aggregated to spells** (e.g., `cip_spells()` for continuous inpatient spells).

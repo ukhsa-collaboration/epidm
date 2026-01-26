@@ -13,7 +13,7 @@
 #'    \item{"4"}{Where a patient has a positive test between two hospital stays the most recent completed hospital stay prior to the test is retained except if the time between these events is greater than 14 days, then the first admission following the test is retained}
 #'  }
 #'
-#' @section Workflow context (concise):
+#' @section Workflow context:
 #' Use `hospital_in_out_dates()` **after**:
 #' - Linking A&E to inpatient spells (e.g., via `link_ae_inpatient()`),
 #' - Constructing spells (e.g., `group_time()` or `cip_spells()`),
