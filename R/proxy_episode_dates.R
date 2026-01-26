@@ -93,10 +93,39 @@ proxy_episode_dates <- function(x,
 
 
   ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(data)) {
+    stop(force_copy_error)
+  }
+
   if(.forceCopy) {
     x <- data.table::copy(x)
   } else {
     data.table::setDT(x)
+  }
+
+  # Error handling
+
+  # Validate input columns
+  required_cols <- c(group_vars, spell_start_date, spell_end_date, discharge_destination)
+
+  missing_cols <- setdiff(required_cols, names(x))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+
+  # Validate date column
+  if (!inherits(x[[spell_start_date]], "Date") || !inherits(x[[spell_end_date]], "Date")) {
+    stop("Columns for spell start and end dates must be of type Date.")
+  }
+
+  # Check for empty data
+  if (nrow(x) == 0) {
+    stop("Input data has zero rows.")
+  }
+
+  # Validate grouping variables
+  if (anyDuplicated(group_vars)) {
+    stop("`group_vars` contains duplicates. Provide unique column names.")
   }
 
   ## Needed to prevent RCMD Check fails

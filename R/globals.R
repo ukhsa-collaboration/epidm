@@ -40,6 +40,7 @@ utils::globalVariables(
     'tmp.regular_attender',
     'tmp.respecType',
     'tmp.spFlag',
+    'tmp.genus',
     'tmp.spell.N',
     'tmp.spell.n',
     'tmp.spellN',
@@ -102,6 +103,15 @@ utils::globalVariables(
     'pos_in_hospital',
     'pos14_order',
     'hospital_event_rank',
-    'N'
+    'N',
+    'tmp.id',
+    'tmp.idMode',
+    'tmp.sN',
+    'tmp.valid.n.swap'
   )
 )
+
+force_copy_error <-
+  "When '.forceCopy = TRUE', the input must be a data.table. Convert before calling (e.g. data.table::setDT(data)) or pass a data.table object."
+
+

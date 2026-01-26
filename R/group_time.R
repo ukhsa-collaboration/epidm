@@ -67,6 +67,7 @@
 #' infection events fall within or around periods of hospital care,
 #' enabling combined SGSS–HES/SUS–ECDS analyses.
 #'
+#'
 #' @import data.table
 #'
 #' @param x data frame, this will be converted to a data.table
@@ -99,6 +100,28 @@
 #'
 #' @return
 #' A `data.table` containing all original columns plus:
+#' @param date_end column containing the end dates for the *interval*, quoted
+#'
+#' @param window an integer representing a time window in days which will be
+#'   applied to the start date for grouping *events*
+#' @param window_type character, to determine if a 'rolling' or 'static'
+#'   grouping method should be used when grouping *events*.
+#'   A *'static'* window will identify the first event, and all records X days
+#'   from that event will be attributed to the same episode. Eg. in a 14 day
+#'   window, if first event is on 01 Mar, and events on day 7 Mar and 14 Mar will be
+#'   grouped, but an event starting 15 Mar days after will start a new episode.
+#'   A *'rolling'* window resets the day counter with each new event. Eg.
+#'   Events on 01 Mar, 07 Mar, 14 Mar and 15 Mar are all included in a single episode,
+#'   as will any additional events up until the 29 Mar (assuming a 14-day window).
+#'
+#' @param indx_varname a character string to set variable name for the
+#'   index column which provides a grouping key; default is indx
+#' @param min_varname a character string to set variable name for the
+#'   time period minimum
+#' @param max_varname a character string set variable name for the time
+#'   period maximum
+#' @param .forceCopy default FALSE; TRUE will force data.table to take a copy
+#'   instead of editing the data without reference
 #'
 #' \describe{
 #'   \item{`indx`; renamed using `indx_varname`}{an id field for the new
@@ -189,16 +212,33 @@ group_time <- function(x,
                        .forceCopy = FALSE
 ){
 
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # indx <-
-  #   tmp.dateNum <-
-  #   max_date <- min_date <-
-  #   tmp.episode <- tmp.windowEnd <- tmp.windowStart <- tmp.windowCmax <-
-  #   NULL
+
+  if (!is.data.frame(x) && !data.table::is.data.table(x)) {
+    stop("'x' must be a data.frame or data.table")
+  }
+
+  if (!date_start %in% names(x)) stop(paste("Column", date_start, "not found in x"))
+
+  if (!missing(date_end) && !date_end %in% names(x)) stop(paste("Column", date_end, "not found in x"))
+
+  if (!all(group_vars %in% names(x))) stop("Some group_vars not found in x")
+
+  if (!is.numeric(window) || window <= 0) stop("'window' must be a positive numeric value")
+
+  if (!window_type %in% c("rolling", "static")) stop("'window_type' must be 'rolling' or 'static'")
+
+  if (!inherits(x[[date_start]], "Date")) stop(paste(date_start, "must be of class Date"))
+
+  if (sum(!is.na(x[[date_start]])) == 0) {
+    warning("No valid rows with non-NA start dates; returning original data.")
+    return(x)
+  }
 
   ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(data)) {
+    stop(force_copy_error)
+  }
+
   if(.forceCopy) {
     x <- data.table::copy(x)
   } else {

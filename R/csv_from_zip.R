@@ -14,18 +14,50 @@
 #'
 #' @examples
 #' \dontrun{
-#' read.csv(csv_from_zip("https://files.digital.nhs.uk/assets/ods/current/succarc.zip"))
+#' read.csv(csv_from_zip("https://files.digital.nhs.uk/assets/ods/current/pcodeall.zip"))
 #' }
 #'
 
 csv_from_zip <- function(x) {
+
   loc.url <- x
   td <- tempdir()
-  tf <- tempfile(tmpdir=td, fileext=".zip")
-  utils::download.file(loc.url, tf)
-  fname <- unzip(tf, list=TRUE)$Name[grep("csv|xls",unzip(tf,list=TRUE)$Name)]
-  utils::unzip(tf, files=fname, exdir=td,overwrite=TRUE)
+  tf <- tempfile(tmpdir = td, fileext = ".zip")
+
+  # Download with error handling
+  tryCatch({
+    utils::download.file(loc.url, tf, quiet = TRUE)
+  }, error = function(e) {
+    stop("Download failed: ", e$message)
+  })
+
+  # List files in ZIP
+  files_in_zip <- tryCatch({
+    unzip(tf, list = TRUE)$Name
+  }, error = function(e) {
+    stop("Failed to read ZIP: ", e$message)
+  })
+
+  # Zip is empty
+  if (length(files_in_zip) == 0) {
+    stop("The ZIP archive is empty.")
+  }
+
+
+  # Added pattern to overcome case sensitivity
+  pattern <- "\\.csv$"
+
+  # Match pattern
+  fname <- grep(pattern, files_in_zip, value = TRUE, ignore.case = TRUE)
+  if (length(fname) == 0) {
+    stop("No files matching pattern '", pattern, "' found in ZIP.")
+  }
+
+  # Extract file
+  utils::unzip(tf, files = fname, exdir = td, overwrite = TRUE)
+
   fpath <- file.path(td, fname)
   return(fpath)
+
 }
 

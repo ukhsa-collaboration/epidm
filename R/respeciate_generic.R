@@ -9,13 +9,17 @@
 #' "GENUS UNNAMED". However, they may also have a fully identified sample taken
 #' from the same site within a recent time period.  This function captures
 #' species_col  from another sample within X-days of an unspeciated isolate.
+#' Respeciation is restricted to organisms of the same genus; species will not
+#' be inferred from isolates belonging to a different genus. Trailing "UNNAMED"
+#' is normalised to "SP" before any processing.
 #'
 #' @import data.table
 #' @importFrom stringr str_detect
 #'
 #' @param x a data.frame or data.table object
 #' @param group_vars the minimum grouping set of variables for like samples in
-#'   a character vector; suggest c('patient_id','specimen_type','genus')
+#'   a character vector; suggest c('patient_id','specimen_type') - genus will automatically
+#'   be included in the groupby. This is built from the species_col
 #' @param species_col a character containing the column with the organism species_col
 #'   name
 #' @param date_col a character containing the column with the specimen/sample date_col
@@ -60,21 +64,52 @@ respeciate_generic <- function(x,
                                ) {
 
   ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(data)) {
+    stop(force_copy_error)
+  }
+
   if(.forceCopy) {
     x <- data.table::copy(x)
   } else {
     data.table::setDT(x)
   }
 
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # tmp.dayR <- tmp.spFlag <- tmp.respecType <- tmp.genus <- NULL
+  # Error handling
 
-  ## NSE for group_vars
-  group_vars <- substitute(group_vars)
+  # Validate input columns
+  required_cols <- c(group_vars, species_col, date_col)
 
-  ## steup some helpful vars first
+  missing_cols <- setdiff(required_cols, names(x))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+
+  # Validate date column
+  if (!inherits(x[[date_col]], "Date")) {
+    stop("Column for date_col must be of type Date.")
+  }
+
+  # Check for empty data
+  if (nrow(x) == 0) {
+    stop("Input data has zero rows.")
+  }
+
+  # Validate grouping variables
+  if (anyDuplicated(group_vars)) {
+    stop("`group_vars` contains duplicates. Provide unique column names.")
+  }
+
+  # Warning about missing dates
+  if (anyNA(x[[date_col]])) {
+    warning("There are missing values in date column. Results may be affected.")
+  }
+
+  # Normalising species names
+  x[, (species_col) := trimws(as.character(get(species_col)))] # Remove any whitespace
+  x[, (species_col) := toupper(get(species_col))]                     # upper-case for consistent matching
+  x[, (species_col) := sub("\\bUNNAMED\\b$", "SP", get(species_col))] # change UNNAMED -> SP
+
+  ## setup some helpful vars first
   x[,
     c(
       'tmp.genus',
@@ -82,12 +117,17 @@ respeciate_generic <- function(x,
       ) := .(
         gsub("([A-Za-z]+).*", "\\1", get(species_col)),
         data.table::fifelse(
-          stringr::str_detect(get(species_col), " SP$|UNNAMED$|species_col$"),
+          stringr::str_detect(get(species_col), " SP$|species_col$"),
           1,
           0)
       )
     ]
 
+  ## NSE for group_vars
+  group_vars <- eval(substitute(group_vars))
+
+  ## Adding tmp.genus to group vars so no cross genus contamination
+  group_vars <- c(group_vars, "tmp.genus")
 
   ## set a static key and order for the table
   data.table::setorderv(x, c(eval(group_vars),date_col))
@@ -119,7 +159,7 @@ respeciate_generic <- function(x,
           ),
         data.table::fifelse(
           stringr::str_detect(get(species_col),
-                              " SP$|UNNAMED$|species_col$"),
+                              " SP$|species_col$"),
           1,0)
 
       ),
@@ -147,7 +187,8 @@ respeciate_generic <- function(x,
           tmp.spFlag==1 & tmp.respecType==2, data.table::shift(get(species_col),type="lead"),
           default = get(species_col)[1]
         )
-      )
+      ),
+      by = group_vars
     ]
 
     respecCount <- sum(x$tmp.respecType %in% c(1,2),na.rm=TRUE)

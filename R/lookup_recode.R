@@ -111,13 +111,29 @@ lookup_recode <- function(src,
                                  'ecds_destination_code',
                                  'manual'),
                           .import = NULL) {
+  # Error handling
+  # src must be provided
+  if (missing(src)) {
+    stop("'src' must be supplied.", call. = FALSE)
+  }
 
+  # Check type of src is correct
+  if (!(is.atomic(src) || is.factor(src))) {
+    stop("'src' must be a character, numeric, logical, or factor vector (i.e., a column).", call. = FALSE)
+  }
+
+  type <- match.arg(type)
 
   if (type == 'manual' & missing(.import)) {
-    stop("supply a two item list for the lookup table inthe format list(new,old)")
+    stop("supply a two item list for the lookup table in the format list(new,old)")
   }
 
   if(type == "species"){
+
+    # Verify lookup exists
+    if (!exists("respeciate_organism", inherits = TRUE)) {
+      stop("Lookup table 'respeciate_organism' not found in the environment.")
+    }
 
     ## calls upon the lookup table stored in the epidm package
     ## data(respeciate_organism)
@@ -130,6 +146,11 @@ lookup_recode <- function(src,
 
   } else if (type == "specimen") {
 
+    # Verify lookup exists
+    if (!exists("specimen_type_grouping", inherits = TRUE)) {
+      stop("Lookup table 'specimen_type_grouping' not found in the environment.")
+    }
+
     ## calls upon the lookup table stored in the epidm package
     ## data(specimen_type_grouping)
     lk <- as.list(
@@ -141,6 +162,11 @@ lookup_recode <- function(src,
 
   } else if (type == "inpatient_admission_method") {
 
+    # Verify lookup exists
+    if (!exists("group_inpatient_admission_method", inherits = TRUE)) {
+      stop("Lookup table 'group_inpatient_admission_method' not found in the environment.")
+    }
+
     ## calls upon the internal lookup table stored in the epidm package
     ## epidm:::group_inpatient_admission_method
     lk <- as.list(
@@ -150,6 +176,11 @@ lookup_recode <- function(src,
       )
     )
   } else if (type == "inpatient_discharge_destination") {
+
+    # Verify lookup exists
+    if (!exists("group_inpatient_discharge_destination", inherits = TRUE)) {
+      stop("Lookup table 'group_inpatient_discharge_destination' not found in the environment.")
+    }
 
     ## calls upon the internal lookup table stored in the epidm package
     ## epidm:::group_inpatient_admission_method
@@ -161,6 +192,11 @@ lookup_recode <- function(src,
     )
   } else if (type == "ecds_destination_code") {
 
+    # Verify lookup exists
+    if (!exists("group_ecds_discharge_destination", inherits = TRUE)) {
+      stop("Lookup table 'group_ecds_discharge_destination' not found in the environment.")
+    }
+
     ## calls upon the internal lookup table stored in the epidm package
     ## epidm:::group_inpatient_admission_method
     lk <- as.list(
@@ -171,6 +207,11 @@ lookup_recode <- function(src,
     )
 
   } else if (type == 'manual') {
+
+    # Verify length of each
+    if (length(.import[[1]]) != length(.import[[2]])) {
+      stop("new and old values of the two item list 'list(new,old)' of .import must be the same length")
+    }
 
     lk <- as.list(
       stats::setNames(
