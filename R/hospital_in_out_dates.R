@@ -1,28 +1,40 @@
 #' @title Hospital IN/OUT dates
 #'
-#' @description This function helps to determine when a patient has been in
-#' hospital across  spell aggregation.
-#' When retaining the final record the following criteria is used:
-#'  \describe{
+#' @description
+#' Derives per‑patient **hospital entry (`hospital_in`)** and **exit (`hospital_out`)**
+#' dates by reconciling A&E (ECDS) attendances and inpatient (HES/SUS) spells.
+#' Applies a simple ranking to determine the most relevant hospital period around
+#' an index event date (e.g., a specimen collection date).
+#'
+#'\describe{
 #'    \item{"1"}{Current admissions take priority}
 #'    \item{"2"}{When conflicting on the same day, inpatient admissions take priority over A&E emergency care data}
 #'    \item{"3"}{Where a patient has a linked A&E admission to a hospital inpatient stay, the A&E admission date is used}
 #'    \item{"4"}{Where a patient has a positive test between two hospital stays the most recent completed hospital stay prior to the test is retained except if the time between these events is greater than 14 days, then the first admission following the test is retained}
 #'  }
 #'
-#' @param data the linked asset holding A&E and Inpatient data
-#' @param person_id the column containing the unique patient ID
-#' @param hospital a list containing the following items
+#' @section Workflow context:
+#' Use `hospital_in_out_dates()` **after**:
+#' - Linking A&E to inpatient spells (e.g., via `link_ae_inpatient()`),
+#' - Constructing spells (e.g., `group_time()` or `cip_spells()`),
+#' - Optional code standardisation (e.g., discharge groups
+#'   via `lookup_recode()`)
+#'
+#' @param data A linked table containing A&E and inpatient records (typically the
+#'   output of `link_ae_inpatient()`), including person/event identifiers and
+#'   date fields.
+#' @param person_id Quoted column name for the unique patient identifier.
+#' @param hospital A named **list** specifying column names (all quoted) for:
 #' \describe{
-#'    \item{`org_code`}{the NHS trust organisation codes}
-#'    \item{`event_date`}{the comparison date used; often `specimen_date`}
-#'    \item{`ae_arrive`}{the ECDS arrival date}
-#'    \item{`ae_depart`}{the ECDS discharge date}
-#'    \item{`ae_discharge`}{the ECDS discharge status; recommend grouping from `epidm::lookup_recode`}
-#'    \item{`in_spell_start`}{the HES/SUS spell start date; recommend after `epidm::group_time`}
-#'    \item{`in_spell_end`}{the HES/SUS spell end date; recommend after `epidm::group_time`}
-#'    \item{`in_discharge`}{the HES/SUS discharge destination code; recommend grouping from `epidm::lookup_recode`}
-#'   }
+#'   \item{`org_code`}{Organisation code (optional; used to scope grouping).}
+#'   \item{`event_date`}{Index date to compare against (e.g., `specimen_date`).}
+#'   \item{`ae_arrive`}{ECDS arrival date.}
+#'   \item{`ae_depart`}{ECDS departure date.}
+#'   \item{`ae_discharge`}{ECDS discharge status (use grouped values if available).}
+#'   \item{`in_spell_start`}{Inpatient spell start date.}
+#'   \item{`in_spell_end`}{Inpatient spell end date.}
+#'   \item{`in_discharge`}{Inpatient discharge destination (grouped recommended).}
+#' }
 #'
 #' @seealso epidm::lookup_recode()
 #' @seealso epidm::group_time()
@@ -30,7 +42,14 @@
 #'
 #' @importFrom lubridate `%within%` interval
 #'
-#' @return  new date columns on the data.table for `hospital_in` and `hospital_out` and `hospital_event_rank`
+#' @return
+#' A `data.table` equal to `data` with additional columns:
+#' \describe{
+#'   \item{`hospital_in`}{Derived hospital admission date for the relevant stay.}
+#'   \item{`hospital_out`}{Derived hospital discharge date for the relevant stay.}
+#'   \item{`hospital_event_rank`}{Rank of suitability of the hospital window for the
+#'   given person/event (1 = most suitable).}
+#' }
 #'
 #' @examples
 #' \dontrun{

@@ -2,23 +2,64 @@
 #'
 #' @description
 #' `r lifecycle::badge('stable')`
-#' A function to call an epidm lookup table and
-#' recode  where we are aware of a new value.
 #'
-#' Built in are  the organism re-classifications and specimen_type groupings
-#' and a manual mode.
+#' A function to recode values via named lookup tables (i.e call an epidm lookup table and
+#' recode where we are aware of a new value). It routes to a specific lookup based on type,
+#' returning a character vector where each input value has been mapped to its corresponding
+#' replacement. If a value is not found in the lookup then the original value is returned.
 #'
-#' @param src a character, vector or column containing the value(s) to be referenced
-#' @param type a character value to denote the lookup table used
-#' @param .import a list  in the order list(new,old) containing the
-#' values for another lookup table existing in the environment
+#' Built‑in lookups include:
+#' - **`species`**: Uses the `respeciate_organism` dataset to standardise and
+#'   reclassify organism names (e.g., historic → current nomenclature). This
+#'   supports consistent reporting across SGSS and other laboratory datasets.
+#'
+#' - **`specimen`**: Uses the `specimen_type_grouping` dataset to assign raw
+#'   laboratory specimen types into harmonised specimen groups. This enables
+#'   consistent grouping for reporting, aggregation, and filtering.
+#'
+#' - **`genus_gram_stain`**: Uses the `genus_gram_stain` lookup table, which
+#'   provides Gram stain classifications by bacterial genus. This reference is
+#'   manually maintained against the UKHSA SGSS database and supports rapid
+#'   filtering and high‑level organism categorisation. Users should raise an
+#'   issue or submit a pull request to the `epidm` GitHub repository if
+#'   an organism/genus is missing.
+#'
+#' - **`lab_data`**: Uses the `lab_data` lookup dataset for harmonising
+#'   laboratory code systems and internal SGSS mappings, supporting standardised
+#'   laboratory result interpretation within surveillance pipelines.
+#'
+#' - **`inpatient_admission_method`**: Uses the internal lookup table
+#'   `epidm:::group_inpatient_admission_method` to categorise raw hospital
+#'   admission method codes into operationally meaningful groups.
+#'
+#' - **`inpatient_discharge_destination`**: Uses the internal table
+#'   `epidm:::group_inpatient_discharge_destination` to group hospital discharge
+#'   destination codes into standardised categories for inpatient pathway
+#'   analysis.
+#'
+#' - **`ecds_destination_code`**: Uses the internal table
+#'   `epidm:::group_ecds_discharge_destination`, providing grouped mappings for
+#'   ECDS (Emergency Care Data Set) discharge codes.
+#'
+#' - **`manual`**: Allows the user to supply their own lookup through
+#'   `.import = list(new, old)`. This is useful when working with local,
+#'   provisional, or evolving code sets not yet included in the package’s
+#'   centralised lookup tables.
+#'
+#' @param src Character vector (or column) of values to recode. Coerced to character if needed.
+#' @param type Character scalar specifying the lookup to use. One of:
+#'   `'species'`, `'specimen'`, `'inpatient_admission_method'`,
+#'   `'inpatient_discharge_destination'`, `'ecds_destination_code'`, `'manual'`.
+#' @param .import A two‑element list in the format `list(new, old)` used only
+#'   when `type = 'manual'`. Each element must be a vector of equal length.
 #'
 #' @importFrom purrr imap_chr
 #' @importFrom stats na.omit setNames
 #'
 #'
-#' @return a list object of the recoded field
-#' @export
+#' @return
+#' A character vector containing the recoded values, aligned 1:1 with `src`.
+#' Values not present in the lookup are returned unchanged.
 #'
 #' @examples
 #' df <- data.frame(
@@ -61,8 +102,6 @@
 #'                respeciate_organism$previous_organism_name)
 #'   )
 #'
-
-
 
 lookup_recode <- function(src,
                           type=c('species',

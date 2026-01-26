@@ -25,8 +25,11 @@
 #' @param date_col a character containing the column with the specimen/sample date_col
 #' @param window an integer representing the number of days for which you will
 #'   allow a sample to be respeciated
-#' @param .forceCopy default FALSE; TRUE will force data.table to take a copy
-#'   instead of editing the data without reference
+#' @param .forceCopy Logical (default `FALSE`).
+#'   If `FALSE`, the input is converted to a `data.table` and modified by
+#'   reference.
+#'   If `TRUE`, the input must already be a `data.table`, and the function will
+#'   create an explicit copy to avoid modifying the original object.
 #'
 #' @return a data.table with a recharacterised `species_col` column
 #'

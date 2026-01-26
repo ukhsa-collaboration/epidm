@@ -3,37 +3,44 @@
 #' @description
 #' `r lifecycle::badge('stable')`
 #'
+#' Creates **Continuous Inpatient (CIP) spells** by combining one or more
+#' provider spells into a single uninterrupted period of inpatient care.
+#' CIP definitions follow the NHS Digital methodology: transfers between
+#' providers can be part of the same CIP spell where specific admission,
+#' discharge, and timing criteria are met. A CIP spell begins when a patient is
+#' admitted under consultant care and ends when they are discharged or die.
+#' http://content.digital.nhs.uk/media/11859/Provider-Spells-Methodology/pdf/Spells_Methodology.pdf
 #'
-#' A continuous inpatient (CIP) spell is a continuous period of care
-#'   within the NHS, which does allow specific types of transfers
-#'   to take place. It can therefore be made up of one or more provider
-#'   spells. A CIP spell starts when a decision has been made to admit
-#'   the patient, and a consultant has taken responsibility for their care.
-#'   The spell ends when the patient dies or is discharged from hospital.
-#'   This follows the NHS Digital Provider Spells Methodology:
-#'   http://content.digital.nhs.uk/media/11859/Provider-Spells-Methodology/pdf/Spells_Methodology.pdf
+#' Where spells meet the CIP criteria, they are merged into a continuous spell.
+#' The output includes a CIP index and the derived start and end dates for
+#' the full CIP period.
 #'
 #' @import data.table
 #'
-#' @param x a data frame; will be converted to a data.table
-#' @param group_vars a vector containing any variables to be used for
-#'   record grouping, minimum is a patient identifier
-#' @param spell_start_date Inpatient provider spell or episode admission date
-#' @param admission_method CDS admission method code
-#' @param admission_source CDS admission source code
-#' @param spell_end_date Inpatient provider spell or episode discharge  date
-#' @param discharge_destination CDS discharge destination code
-#' @param patient_classification CDS patient classification code
-#' @param .forceCopy default FALSE; TRUE will force data.table to take a copy
-#'   instead of editing the data without reference
+#' @param x A data.frame or data.table; will be converted to a data.table (usually HES/SUS data)
+#' @param group_vars Character vector of variables used to group records
+#'   (minimum: a patient identifier).
+#' @param spell_start_date Quoted column name containing the provider spell
+#'   admission date.
+#' @param admission_method CDS admission method code.
+#' @param admission_source CDS admission source code.
+#' @param spell_end_date Quoted column name containing the provider spell
+#'   discharge date.
+#' @param discharge_destination CDS discharge destination code.
+#' @param patient_classification CDS patient classification code.
+#' @param .forceCopy Logical (default `FALSE`).
+#'   If `FALSE`, the input is converted to a `data.table` and modified by
+#'   reference.
+#'   If `TRUE`, the input must already be a `data.table`, and the function will
+#'   create an explicit copy to avoid modifying the original object.
 #'
-#' @return the original data.frame as a data.table
-#'   with the following new fields:
+#' @return
+#' A `data.table` containing the original data and three new variables:
 #' \describe{
-#'   \item{`cip_indx`}{an id field for the CIP spell}
-#'   \item{`cip_spell_start`}{the start date for the CIP spell}
-#'   \item{`cip_spell_end`}{the end date for the CIP spell}
-#'   }
+#'   \item{`cip_indx`}{Unique identifier for the derived CIP spell.}
+#'   \item{`cip_spell_start`}{Start date for the continuous inpatient spell.}
+#'   \item{`cip_spell_end`}{End date for the continuous inpatient spell.}
+#' }
 #'
 #' @examples
 #' cip_test <- data.frame(
