@@ -174,8 +174,18 @@ patrick::with_parameters_test_that(
   .cases = cases,
   .interpret_glue = FALSE,
   {
+    if (forceCopy == TRUE) {
+
+      sample_data_all <- data.table::setDT(sample_data)
+
+    } else {
+
+      sample_data_all <- data.frame(sample_data)
+
+    }
+
     result <- cip_spells(
-      x = sample_data,
+      x = sample_data_all,
       group_vars = group_vars,
       spell_start_date = "spell_start",
       admission_method = "adm_meth",

@@ -130,18 +130,6 @@ cip_spells <- function(x,
     stop("Input `x` must be a data.frame or data.table.")
   }
 
-  ## convert data.frame to data.table or take a copy
-  if (.forceCopy && !data.table::is.data.table(x)) {
-    stop(force_copy_error)
-  }
-
-  ## convert data.frame to data.table or take a copy
-  if(.forceCopy) {
-    x <- data.table::copy(x)
-  } else {
-    data.table::setDT(x)
-  }
-
   # Error handling
 
   # Validate input columns
@@ -171,6 +159,18 @@ cip_spells <- function(x,
   # Warning about missing dates
   if (anyNA(x[[spell_start_date]]) || anyNA(x[[spell_end_date]])) {
     warning("There are missing values in date columns. Results may be affected.")
+  }
+
+  ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(x)) {
+    stop(force_copy_error)
+  }
+
+  ## convert data.frame to data.table or take a copy
+  if(.forceCopy) {
+    x <- data.table::copy(x)
+  } else {
+    data.table::setDT(x)
   }
 
   ## just arrange the data

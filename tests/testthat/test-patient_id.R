@@ -107,6 +107,7 @@ make_stage_data <- function(stage) {
 
   if (stage == 11) {
     x <- x[1:2, ]
+    x$nhs_number <- c(nhs_a, nhs_b)
     x$patient_birth_date <- as.Date(c("1962-06-14", "1962-06-14"))
     x$surname <- c("RODA", "TYLER")
     x$forename <- c("TYLER", "RODA")
@@ -300,4 +301,3 @@ patrick::with_parameters_test_that(
     "_forceCopy=", rep(c("TRUE", "FALSE"), times = 4)
   )
 )
-
