@@ -186,9 +186,15 @@ test_that(".forceCopy behaves as expected", {
     disdest = c(19, 19)
   )
 
-  df_before <- df
+  df_copy <- data.table::as.data.table(df)
+
+  df_before <- data.table::copy(df_copy)
+
   result_force <- run_proxy(df_copy, .forceCopy = TRUE)
-  expect_equal(df, df_before)
+
+  expect_true(data.table::is.data.table(result_force))
+
+  expect_equal(df_copy, df_before)
 
 })
 

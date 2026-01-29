@@ -230,6 +230,8 @@ test_that("Errors are raised for invalid inputs", {
 
 test_that("Expected error when .sortOrder isn't the correct type", {
 
+  pd <- make_pd()
+
   expect_error(
     uk_patient_id(x = pd, id = id_map, .useStages = 1, .sortOrder = 1),
     "`.sortOrder` must be a character vector of one or more column names."
