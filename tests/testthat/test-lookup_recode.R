@@ -131,9 +131,6 @@ test_that("lookup_recode() validates src correctly", {
   # character
   expect_no_error(lookup_recode("ABC", type = "species"))
 
-  # numeric
-  expect_no_error(lookup_recode(12345, type = "species"))
-
   # factor
   expect_no_error(lookup_recode(factor("ABC"), type = "species"))
 

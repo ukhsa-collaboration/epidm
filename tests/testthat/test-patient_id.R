@@ -1,486 +1,305 @@
+# Load libraries
 library(testthat)
-library(epidm)
+library(data.table)
 
-# S1: NHS + DOB
-test_that("Stage 1 linkage assigns correct IDs", {
+# Sample data and helpers for tests
 
-
-  pd <- data.frame(
+make_pd <- function() {
+  data.frame(
+    record_id = 1:8,
     nhs_number = c(9435817777, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45202', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1989-01-01')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODA', 'RODA', 'LINTON', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'TYLER', 'KASHIEF', 'JANE', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
+    local_patient_identifier = c("HS45202", "HS45202", "KR2535", "NEW001", "IG12067", "IG12067", "IG12067", "UK8734"),
+    patient_birth_date = as.Date(c("1962-06-14", "1962-06-14", "1927-06-24", "1938-10-05", "1938-10-05", "1930-01-01", "1930-02-01", "1989-01-01")),
+    sex = c("Male", "Male", "Male", "Female", "Female", "Female", "Female", "Male"),
+    surname = c("RODA", "RODA", "LINTON", "WILLIAMS", "WILLIAMS", "WILLIAMS", "WILLIAMS", "JAMILETH"),
+    forename = c("TYLER", "TYLER", "KASHIEF", "JANE", "JAMILETH", "JAMILETH", "JAMILETH", "WILLIAMS"),
+    specimen_date = as.Date(c("2023-08-26", "2023-08-27", "2023-02-25", "2024-01-01", "2024-02-02", "2024-03-03", "2024-04-03", "2024-01-01")),
+    postcode = c("CW6 9TX", "CW6 9TX", "PL7 1LU", "BN14 9EP", "BN14 9EP", "BN14 9EP", "BN14 9EP", "BN14 9EP"),
+    stringsAsFactors = FALSE
+  )
+}
+
+id_map <- list(
+  nhs_number = "nhs_number",
+  hospital_number = "local_patient_identifier",
+  date_of_birth = "patient_birth_date",
+  sex_mfu = "sex",
+  forename = "forename",
+  surname = "surname",
+  postcode = "postcode"
+)
+
+make_stage_data <- function(stage) {
+
+  nhs_a <- 9435817777
+  nhs_b <- 9435773982
+
+  x <- data.frame(
+    record_id = 1:3,
+    nhs_number = c(NA, NA, NA),
+    local_patient_identifier = c("H001", "H002", "H003"),
+    patient_birth_date = as.Date(c("1980-01-05", "1980-02-06", "1981-03-07")),
+    sex = c("Female", "Female", "Female"),
+    forename = c("ALICE", "ALICE", "BOB"),
+    surname = c("SMITH", "SMITH", "JONES"),
+    postcode = c("AA1 1AA", "AA1 1AA", "BB2 2BB"),
+    specimen_date = as.Date(c("2024-01-01", "2024-01-02", "2024-01-03")),
+    stringsAsFactors = FALSE
   )
 
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 1
-  )[]
+  if (stage == 1) {
+    x$nhs_number <- c(nhs_a, nhs_a, nhs_b)
+    x$patient_birth_date <- as.Date(c("1970-01-01", "1970-01-01", "1970-01-02"))
+  }
 
-  # Define the expected ID column
-  expected_id <- c(1, 2, 2, 4, 4, 5, 7, 8)
+  if (stage == 2) {
+    x$nhs_number <- c(nhs_a, nhs_b, nhs_b)
+    x$local_patient_identifier <- c("H123", "H123", "H999")
+    x$patient_birth_date <- as.Date(c("1970-01-01", "1970-01-01", "1970-01-02"))
+  }
 
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
-})
+  if (stage == 3) {
+    x$nhs_number <- c(nhs_a, nhs_a, nhs_b)
+    x$local_patient_identifier <- c("H123", "H123", "H999")
+  }
 
-# S2: HOS + DOB
-test_that("Stage 2 linkage assigns correct IDs", {
+  if (stage == 4) {
+    x$nhs_number <- c(nhs_a, nhs_a, nhs_b)
+    x$surname <- c("BROWN", "BROWN", "BROWN")
+  }
 
+  if (stage == 5) {
+    x$local_patient_identifier <- c("H123", "H123", "H999")
+    x$surname <- c("BROWN", "BROWN", "BROWN")
+  }
 
-  pd <- data.frame(
-    nhs_number = c(9435817777, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45202', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1989-01-01')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODA', 'RODA', 'LINTON', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'TYLER', 'KASHIEF', 'JANE', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
+  if (stage == 6) {
+    x$patient_birth_date <- as.Date(c("1970-01-01", "1970-01-01", "1971-01-01"))
+    x$surname <- c("BROWN", "BROWN", "BROWN")
+  }
+
+  if (stage == 7) {
+    x$sex <- c("Male", "Male", "Male")
+    x$forename <- c("ALICE", "ALICE", "BOB")     # record 3 differs
+    x$surname <- c("BROWN", "BROWN", "BROWN")
+    x$patient_birth_date <- as.Date(c("1970-01-01", "1990-01-01", "1971-01-01"))
+  }
+
+  if (stage == 8) {
+    x$sex <- c("Female", "Female", "Female")
+    x$patient_birth_date <- as.Date(c("1980-01-05", "1980-01-20", "1980-02-01"))
+    x$forename <- c("ALICE", "AMY", "ALICE")
+    x$surname <- c("SMITH", "SMYTH", "SMITH")
+  }
+
+  if (stage == 9) {
+    x$sex <- c(NA, NA, NA)
+    x$patient_birth_date <- as.Date(c("1980-01-05", "1980-01-20", "1980-02-01"))
+    x$forename <- c("ALICE", "AMY", "ALICE")
+    x$surname <- c("SMITH", "SMYTH", "SMITH")
+  }
+
+  if (stage == 10) {
+    x$forename <- c("ALICE", "ALICE", "ALICE")
+    x$surname <- c("BROWN", "BROWN", "BROWN")
+    x$postcode <- c("AA1 1AA", "AA11AA", "BB2 2BB")
+  }
+
+  if (stage == 11) {
+    x <- x[1:2, ]
+    x$nhs_number <- c(nhs_a, nhs_b)
+    x$patient_birth_date <- as.Date(c("1962-06-14", "1962-06-14"))
+    x$surname <- c("RODA", "TYLER")
+    x$forename <- c("TYLER", "RODA")
+    x$sex <- c("Male", "Male")
+    x$postcode <- c("CW6 9TX", "CW6 9TX")
+  }
+
+  x
+}
+
+ids_by_record <- function(res, x) {
+  setNames(res$id[match(x$record_id, res$record_id)], as.character(x$record_id))
+}
+
+stage_links <- function(stage) {
+
+  x <- make_stage_data(stage)
+
+  res <- uk_patient_id(
+    x = x,
+    id = id_map,
+    .useStages = stage,
+    .keepStages = TRUE,
+    .forceCopy = FALSE,
+    .sortOrder = if ("specimen_date" %in% names(x)) "specimen_date" else NULL
   )
 
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 2
-  )[]
+  if (stage == 11) {
+    expect_equal(res$id[1], res$id[2])
+    expect_true(grepl("s11", res$stageMatch[1]))
+    expect_true(grepl("s11", res$stageMatch[2]))
+    return(invisible(NULL))
+  }
 
-  # Define the expected ID column
-  expected_id <- c(1, 2, 2, 4, 5, 6, 7, 8)
+  id_map_record <- ids_by_record(res, x)
 
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
-})
+  expect_equal(unname(id_map_record["1"]), unname(id_map_record["2"]))
+  expect_false(unname(id_map_record["1"]) == unname(id_map_record["3"]))
 
-# S3: NHS + HOS
-test_that("Stage 3 linkage assigns correct IDs", {
+  stage_by_record <- setNames(res$stageMatch[match(x$record_id, res$record_id)], as.character(x$record_id))
+  expect_true(grepl(paste0("s", stage), stage_by_record["1"]))
+  expect_true(grepl(paste0("s", stage), stage_by_record["2"]))
 
+  invisible(NULL)
+}
 
-  pd <- data.frame(
-    nhs_number = c(9435817777, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45202', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1989-01-01')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODA', 'RODA', 'LINTON', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'TYLER', 'KASHIEF', 'JANE', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
-  )
+# Tests
 
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 3
-  )[]
+test_that("Returns expected structure", {
 
-  # Define the expected ID column
-  expected_id <- c(1, 2, 2, 4, 5, 6, 7, 7)
+  pd <- make_pd()
 
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
-})
+  res <- uk_patient_id(x = pd, id = id_map, .useStages = 1, .forceCopy = FALSE, .sortOrder = "specimen_date")
 
-
-# S4: NHS + NAME
-test_that("Stage 4 linkage assigns correct IDs", {
-
-
-  pd <- data.frame(
-    nhs_number = c(9435817777, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45202', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1989-01-01')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODA', 'RODA', 'LINTON', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'TYLER', 'KASHIEF', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
-  )
-
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 4
-  )[]
-
-  # Define the expected ID column
-  expected_id <- c(1, 2, 2, 4, 4, 5, 7, 7)
-
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
-})
-
-# S5: HOS + NAME
-test_that("Stage 5 linkage assigns correct IDs", {
-
-
-  pd <- data.frame(
-    nhs_number = c(9435817777, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45202', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1989-01-01')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODA', 'RODA', 'LINTON', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'TYLER', 'KASHIEF', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
-  )
-
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 5
-  )[]
-
-  # Define the expected ID column
-  expected_id <- c(1, 2, 2, 4, 5, 6, 6, 6)
-
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
-})
-
-# S6: DOB + SURNAME  >>>> not producing expected output
-test_that("Stage 6 linkage assigns correct IDs", {
-
-
-  pd <- data.frame(
-    nhs_number = c(9435797881, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45201', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1989-01-01')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODA', 'RODA', 'LINTON', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'TYLE', 'KASHIEF', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
-  )
-
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 6
-  )[]
-
-  # Define the expected ID column
-  expected_id <- c(1, 2, 2, 4, 4, 5, 7, 8)
-
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
-})
-
-## S7: SEX + FULL NAME
-test_that("Stage 7 linkage assigns correct IDs", {
-
-
-  pd <- data.frame(
-    nhs_number = c(9435817777, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45202', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1989-01-01')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODAH', 'RODA', 'LINTON', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'TYLER', 'KASHIEF', 'JAMILETH', 'JAMILETH', 'JAMIL', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
-  )
-
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 7
-  )[]
-
-  # Define the expected ID column
-  expected_id <- c(1, 2, 3, 4, 4, 4, 5, 7)
-
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
+  expect_true(data.table::is.data.table(res))
+  expect_true("id" %in% names(res))
+  expect_equal(nrow(res), nrow(pd))
+  expect_type(res$id, "integer")
 })
 
 
-#  S8: SEX + YM DOB + FUZZY NAME  << not work as expected
-test_that("Stage 8 linkage assigns correct IDs", {
+patrick::with_parameters_test_that(
+  "All stages link as expected with forceCopy FALSE",
+  {
+    stage_links(stage)
+  },
+  stage = 11,
+  .test_name = paste0("stage_", 1:11)
+)
 
+test_that("keepValidNHS adds a valid_nhs column", {
+  pd <- make_pd()
 
-  pd <- data.frame(
-    nhs_number = c(9435817777, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45202', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1989-01-01')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODA', 'RODAH', 'LINTON', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'TYLER', 'KASHIEF', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
+  data.table::setDT(pd)
+
+  res <- uk_patient_id(
+    x = pd,
+    id = id_map,
+    .useStages = 1,
+    .keepValidNHS = TRUE,
+    .forceCopy = TRUE
   )
 
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 8
-  )[]
+  expect_true("valid_nhs" %in% names(res))
+  expect_true(is.logical(res$valid_nhs))
+})
 
-  # Define the expected ID column
-  expected_id <- c(1, 2, 2, 4, 4, 4, 4, 5)
+test_that("Errors are raised for invalid inputs", {
+  pd <- make_pd()
 
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
+  data.table::setDT(pd)
+
+  expect_error(
+    uk_patient_id(x = NULL, id = id_map),
+    "`x` must be a data.frame or data.table"
+  )
+
+  expect_error(
+    uk_patient_id(x = pd, id = list(nhs_number = 1)),
+    "character scalars"
+  )
+
+  expect_error(
+    uk_patient_id(x = pd, id = id_map, .useStages = 99),
+    "1 to 11"
+  )
+
+  expect_error(
+    uk_patient_id(x = pd, id = id_map, .useStages = 1, .sortOrder = "not_a_col"),
+    "Missing \\.sortOrder column"
+  )
+
+  pd2 <- pd
+  pd2$id <- 1:nrow(pd2)
+  expect_message(
+    uk_patient_id(x = pd2, id = id_map),
+    "`x` already contains a column named `id`. Please rename it to avoid overwrite."
+  )
+})
+
+test_that("Expected error when .sortOrder isn't the correct type", {
+
+  pd <- make_pd()
+
+  expect_error(
+    uk_patient_id(x = pd, id = id_map, .useStages = 1, .sortOrder = 1),
+    "`.sortOrder` must be a character vector of one or more column names."
+  )
+
 })
 
 
 
+patrick::with_parameters_test_that(
+  "keepStages, .keepValidNHS and .forceCopy options behave as expected",
+  {
 
-# S9: YM DOB + FUZZY NAME << not work as expected
-test_that("Stage 9 linkage assigns correct IDs", {
+    x <- make_stage_data(1)
+
+    x_before <- x
+
+    if (isTRUE(forceCopy)) {
+      data.table::setDT(x)
+      x_before <- data.table::copy(x)
+    }
+
+    res <- uk_patient_id(
+      x = x,
+      id = id_map,
+      .useStages = 1,
+      .keepStages = keepStages,
+      .keepValidNHS = keepValidNHS,
+      .forceCopy = forceCopy,
+      .sortOrder = if ("specimen_date" %in% names(x)) "specimen_date" else NULL
+    )
+
+    id_map_record <- ids_by_record(res, x)
+    expect_equal(unname(id_map_record["1"]), unname(id_map_record["2"]))
+    expect_false(unname(id_map_record["1"]) == unname(id_map_record["3"]))
 
 
-  pd <- data.frame(
-    nhs_number = c(9435817777, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45202', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1989-01-01')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODA', 'RODAH', 'LINTON', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'TYLER', 'KASHIEF', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
+    if (isTRUE(keepStages)) {
+      expect_true("stageMatch" %in% names(res))
+      stage_by_record <- setNames(res$stageMatch[match(x$record_id, res$record_id)], as.character(x$record_id))
+      expect_true(grepl("s1", stage_by_record["1"]))
+      expect_true(grepl("s1", stage_by_record["2"]))
+    } else {
+      expect_false("stageMatch" %in% names(res))
+    }
+
+    if (isTRUE(keepValidNHS)) {
+      expect_true("valid_nhs" %in% names(res))
+      expect_true(is.logical(res$valid_nhs))
+    } else {
+      expect_false("valid_nhs" %in% names(res))
+    }
+
+    if (isTRUE(forceCopy)) {
+      expect_equal(x, x_before)
+    }
+
+    expect_true("id" %in% names(res))
+    expect_type(res$id, "integer")
+  },
+
+  keepStages = c(TRUE, FALSE),
+  keepValidNHS = c(TRUE, FALSE),
+  forceCopy = c(TRUE, FALSE),
+
+  .test_name = paste0(
+    "keepStages=", rep(c("TRUE", "FALSE"), each = 4),
+    "_keepValidNHS=", rep(rep(c("TRUE", "FALSE"), each = 2), times = 2),
+    "_forceCopy=", rep(c("TRUE", "FALSE"), times = 4)
   )
-
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 9
-  )[]
-
-  # Define the expected ID column
-  expected_id <- c(1, 2, 2, 4, 4, 4, 4, 5)
-
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
-})
-
-
-
-## S10: NAME + PCD
-
-test_that("Stage 10 linkage assigns correct IDs", {
-
-
-  pd <- data.frame(
-    nhs_number = c(9435817777, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45202', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1989-01-01')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODA', 'RODA', 'LINTON', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'TYLER', 'KASHIEF', 'JAMILETH', 'JAMILETH', 'JAMIL', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
-  )
-
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 10
-  )[]
-
-  # Define the expected ID column
-  expected_id <- c(1, 2, 2, 4, 4, 4, 5, 7)
-
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
-})
-
-
-## S11: NAME SWAP + DOB << not work as expected
-
-test_that("Stage 11 linkage assigns correct IDs", {
-
-
-  pd <- data.frame(
-    nhs_number = c(9435817777, 9435817777, 9435773982, 9435797881, 9435797881, 9435754422, 9435754422, 9435802508),
-    local_patient_identifier = c('HS45202', 'HS45202', 'KR2535', 'NEW001', 'IG12067', 'IG12067', 'IG12067', 'UK8734'),
-    patient_birth_date = as.Date(c('1962-06-14', '1962-06-14', '1927-06-24', '1938-10-05', '1938-10-05', '1930-01-01', '1930-02-01', '1938-10-05')),
-    sex = c('Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Male'),
-    surname = c('RODA', 'TYLER', 'LINTON', 'WILLIAMS', 'JAMILETH', 'WILLIAMS', 'WILLIAMS', 'JAMILETH'),
-    forename = c('TYLER', 'RODA', 'KASHIEF', 'JAMILETH', 'WILLIAMS', 'WILLIAMS', 'JAMILETH', 'WILLIAMS'),
-    organism_species_name = c('STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'STAPHYLOCOCCUS AUREUS', 'E. coli', 'E. coli', 'KLEBSIELLA PNEUMONIAE', 'KLEBSIELLA PNEUMONIAE', 'E. coli'),
-    specimen_date = as.Date(c('2023-08-26', '2023-08-27', '2023-02-25', '2024-01-01', '2024-02-02', '2024-03-03', '2024-04-03', '2024-01-01')),
-    specimen_type = c('BLOOD', 'BLOOD', 'BLOOD', 'URINE', 'URINE', 'BLOOD', 'BLOOD', 'URINE'),
-    lab_code = c('ES3851', 'ES3851', 'CU5997', 'LAB1001', 'LAB1002', 'LAB1003', 'LAB1003', 'LAB1001'),
-    local_authority_name = c('Cheshire West and Chester', 'Cheshire West and Chester', 'Plymouth', 'Worthing', 'Worthing', 'Worthing', 'Worthing', 'Worthing'),
-    local_authority_code = c('E06000050', 'E06000050', 'E06000026', 'E07000229', 'E07000229', 'E07000229', 'E07000229', 'E07000229'),
-    postcode = c('CW6 9TX', 'CW6 9TX', 'PL7 1LU', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP', 'BN14 9EP')
-  )
-
-  result <- uk_patient_id(
-    data = pd,
-    id = list(
-      nhs_number = 'nhs_number',
-      hospital_number = 'local_patient_identifier',
-      date_of_birth = 'patient_birth_date',
-      sex_mfu = 'sex',
-      forename = 'forename',
-      surname = 'surname',
-      postcode = 'postcode'
-    ),
-    .sortOrder = 'specimen_date',
-    .forceCopy = TRUE,
-    .useStages = 11
-  )[]
-
-  # Define the expected ID column
-  expected_id <- c(1, 2, 2, 4, 4, 4, 5, 7)
-
-  # Check if the result matches the expected values
-  expect_equal(result$id, expected_id)
-})
-
+)

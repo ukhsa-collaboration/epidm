@@ -212,20 +212,21 @@ group_time <- function(x,
                        .forceCopy = FALSE
 ){
 
+  # Checks
+
+  if(missing(x)){
+    stop("x must be supplied as a data.frame or data.table")
+  }
 
   if (!is.data.frame(x) && !data.table::is.data.table(x)) {
     stop("'x' must be a data.frame or data.table")
   }
 
+  if(missing(date_start)){
+    stop("date_start must be supplied as a quoted column name from x")
+  }
+
   if (!date_start %in% names(x)) stop(paste("Column", date_start, "not found in x"))
-
-  if (!missing(date_end) && !date_end %in% names(x)) stop(paste("Column", date_end, "not found in x"))
-
-  if (!all(group_vars %in% names(x))) stop("Some group_vars not found in x")
-
-  if (!is.numeric(window) || window <= 0) stop("'window' must be a positive numeric value")
-
-  if (!window_type %in% c("rolling", "static")) stop("'window_type' must be 'rolling' or 'static'")
 
   if (!inherits(x[[date_start]], "Date")) stop(paste(date_start, "must be of class Date"))
 
@@ -234,8 +235,50 @@ group_time <- function(x,
     return(x)
   }
 
+  if(missing(date_end)){
+
+    if(missing(window_type)){
+      stop("window_type must be specified as either rolling or static")
+    }
+
+    if(!window_type %in% c("rolling", "static")){
+
+     stop("'window_type' must be 'rolling' or 'static'")
+    }
+
+    if(missing(window)){
+      stop("window parameter must be supplied as numeric value, the unit is days")
+    }
+
+    if (!is.numeric(window) || window <= 0) {
+      stop("'window' must be a positive numeric value")
+    }
+  }
+
+  if(!missing(date_end)) {
+
+    if(!date_end %in% names(x)) {
+      stop(paste("Column", date_end, "not found in x"))
+    }
+
+    if (!missing(window) || !missing(window_type)) {
+      warning("date_end is provided so window_type and window are ignored and interval overlap grouping is used.")
+    }
+
+    if (!inherits(x[[date_end]], "Date")) {
+      stop(paste(date_end, "must be of class Date"))
+    }
+  }
+
+
+  if (missing(group_vars) || length(group_vars) == 0) {
+    stop("group_vars must be supplied as a character vector of column names")
+  }
+
+  if (!all(group_vars %in% names(x))) stop("Some group_vars not found in x")
+
   ## convert data.frame to data.table or take a copy
-  if (.forceCopy && !data.table::is.data.table(data)) {
+  if (.forceCopy && !data.table::is.data.table(x)) {
     stop(force_copy_error)
   }
 
@@ -249,14 +292,6 @@ group_time <- function(x,
   # subtitute() not needed on other vars as quoted so use get()
   group_vars <- substitute(group_vars)
 
-  ## checks
-  if(missing(x)){
-    stop("x must be supplied as a data.frame or data.table")
-  }
-  if(missing(date_start)){
-    stop("date_start must be supplied as a quoted column name from x")
-  }
-
   ## seperate out the two halfs if there are missing events/intervals
   ## records in y will not be assigned an indx since there is no event
   y <- x[is.na(get(date_start)), ]
@@ -266,15 +301,6 @@ group_time <- function(x,
   ## static + window methods only ##############################################
   ## bring the static window function in so its all a one stop shop for ease
   if(missing(date_end)){
-
-    if(missing(window_type)){
-      stop("window_type must be specified as either rolling or static")
-    }
-
-    if(missing(window)){
-      stop("window parameter must be supplied as numeric value, the unit is days")
-    }
-
     ## this is for static grouping of single date windows
     if(window_type=='static'){
 

@@ -92,20 +92,24 @@ proxy_episode_dates <- function(x,
                                 .forceCopy = FALSE) {
 
 
-  ## convert data.frame to data.table or take a copy
-  if (.forceCopy && !data.table::is.data.table(data)) {
-    stop(force_copy_error)
-  }
-
-  if(.forceCopy) {
-    x <- data.table::copy(x)
-  } else {
-    data.table::setDT(x)
-  }
-
   # Error handling
 
-  # Validate input columns
+  if (!data.table::is.data.table(x) && !is.data.frame(x)) {
+    stop("`x` must be a data.frame or data.table.")
+  }
+
+  if (!is.logical(.dropTmp) || length(.dropTmp) != 1 || is.na(.dropTmp)) {
+    stop("`.dropTmp` must be a single TRUE/FALSE value.")
+  }
+
+  if (!is.logical(.forceCopy)) {
+    stop("`.forceCopy` must be a single TRUE/FALSE value.")
+  }
+
+  if (!is.character(group_vars) || length(group_vars) < 1 || anyNA(group_vars) || any(!nzchar(group_vars))) {
+    stop("`group_vars` must be a non-empty character vector of column names.")
+  }
+
   required_cols <- c(group_vars, spell_start_date, spell_end_date, discharge_destination)
 
   missing_cols <- setdiff(required_cols, names(x))
@@ -113,27 +117,39 @@ proxy_episode_dates <- function(x,
     stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
   }
 
-  # Validate date column
+  if (!is.character(spell_start_date) || length(spell_start_date) != 1 || is.na(spell_start_date) || !nzchar(spell_start_date)) {
+    stop("`spell_start_date` must be a single non-empty character string naming a column.")
+  }
+
+  if (!is.character(spell_end_date) || length(spell_end_date) != 1 || is.na(spell_end_date) || !nzchar(spell_end_date)) {
+    stop("`spell_end_date` must be a single non-empty character string naming a column.")
+  }
+
+  if (!is.character(discharge_destination) || length(discharge_destination) != 1 || is.na(discharge_destination) || !nzchar(discharge_destination)) {
+    stop("`discharge_destination` must be a single non-empty character string naming a column.")
+  }
+
   if (!inherits(x[[spell_start_date]], "Date") || !inherits(x[[spell_end_date]], "Date")) {
     stop("Columns for spell start and end dates must be of type Date.")
   }
 
-  # Check for empty data
   if (nrow(x) == 0) {
     stop("Input data has zero rows.")
   }
 
-  # Validate grouping variables
   if (anyDuplicated(group_vars)) {
     stop("`group_vars` contains duplicates. Provide unique column names.")
   }
 
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # proxy_missing <-
-  #   tmp.spell.N <- tmp.spell.n <- tmp.spell_start <- tmp.spell_end <-
-  #   NULL
+  ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(x)) {
+    stop(force_copy_error)
+  }
+
+  if (.forceCopy) {
+    x <- data.table::copy(x)
+  }
+  data.table::setDT(x)
 
   ## just arrange the data
   data.table::setorderv(x,c(eval(group_vars),spell_start_date))

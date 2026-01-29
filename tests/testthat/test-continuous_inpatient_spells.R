@@ -1,6 +1,5 @@
 library(testthat)
 library(data.table)
-library(patrick)
 
 # Sample minimal data
 sample_data <- data.table(
@@ -163,20 +162,29 @@ test_that("CIP spell grouping logic works", {
 
 
 # Parameter combinations
-cases <- cases(
-  id_only_copy_true  = list(forceCopy = TRUE,  group_vars = c("id")),
-  id_only_copy_false = list(forceCopy = FALSE, group_vars = c("id")),
-  idprov_copy_true   = list(forceCopy = TRUE,  group_vars = c("id", "provider")),
-  idprov_copy_false  = list(forceCopy = FALSE, group_vars = c("id", "provider"))
+cases <- expand.grid(
+  group_vars = c("id", "provider"),
+  forceCopy = c(FALSE, TRUE),
+  stringsAsFactors = FALSE
 )
 
-with_parameters_test_that(
+patrick::with_parameters_test_that(
   "Handles parameter combinations",
   .cases = cases,
   .interpret_glue = FALSE,
   {
+    if (forceCopy == TRUE) {
+
+      sample_data_all <- data.table::setDT(sample_data)
+
+    } else {
+
+      sample_data_all <- data.frame(sample_data)
+
+    }
+
     result <- cip_spells(
-      x = sample_data,
+      x = sample_data_all,
       group_vars = group_vars,
       spell_start_date = "spell_start",
       admission_method = "adm_meth",
