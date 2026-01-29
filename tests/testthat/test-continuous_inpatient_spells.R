@@ -1,6 +1,5 @@
 library(testthat)
 library(data.table)
-library(patrick)
 
 # Sample minimal data
 sample_data <- data.table(
