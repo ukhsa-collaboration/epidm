@@ -2,7 +2,7 @@
 % Please edit documentation in R/group_time.R
 \name{group_time}
 \alias{group_time}
-\title{Grouping of intervals or events in time together}
+\title{Grouping of intervals or events that occur close together in time}
 \usage{
 group_time(
   x,
@@ -18,10 +18,10 @@ group_time(
 )
 }
 \arguments{
-\item{x}{data frame, this will be converted to a data.table}
+\item{x}{A data.frame or data.table containing date variables for grouping.
+Will be converted to a data.table internally.}
 
-\item{date_start}{column containing the start dates for the grouping,
-provided quoted}
+\item{date_start}{Quoted column name giving the start date for each record.}
 
 \item{date_end}{column containing the end dates for the \emph{interval}, quoted}
 
@@ -38,7 +38,8 @@ A \emph{'rolling'} window resets the day counter with each new event. Eg.
 Events on 01 Mar, 07 Mar, 14 Mar and 15 Mar are all included in a single episode,
 as will any additional events up until the 29 Mar (assuming a 14-day window).}
 
-\item{group_vars}{in a vector, the all columns used to group records, quoted}
+\item{group_vars}{Character vector of quoted column names used to partition
+the data before grouping.}
 
 \item{indx_varname}{a character string to set variable name for the
 index column which provides a grouping key; default is indx}
@@ -50,11 +51,8 @@ time period minimum}
 period maximum}
 
 \item{.forceCopy}{default FALSE; TRUE will force data.table to take a copy
-instead of editing the data without reference}
-}
-\value{
-the original data.frame as a data.table
-with the following new fields:
+instead of editing the data without reference
+
 \describe{
 \item{\code{indx}; renamed using \code{indx_varname}}{an id field for the new
 aggregated events/intervals; note that where the \code{date_start} is NA, an
@@ -63,18 +61,89 @@ aggregated events/intervals; note that where the \code{date_start} is NA, an
 aggregated events/intervals}
 \item{\code{max_date}; renamed using \code{max_varname}}{the end date for the
 aggregated events/intervals}
+}}
 }
+\value{
+A \code{data.table} containing all original columns plus:
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
 
-Group across multiple observations of
-overlapping time intervals, with defined start and end dates,
-or events within a static/fixed or rolling window of time.
-These are commonly used with inpatient HES/SUS data to group spells with
-defined start and end dates,  or to group positive specimen tests,
-based on specimen dates together into infection episodes.
+A utility function to group together observations that represent
+\strong{overlapping date intervals} (e.g., hospital admission spells) or
+\strong{events occurring within a defined time window} e.g., specimen dates
+grouped into infection episodes. The function supports both:
+
+• \strong{Interval-based grouping}: records have a start and an end date; any
+overlapping intervals are grouped together.
+• \strong{Event-based grouping}: records have only a start date and are grouped
+using either a \emph{static} or \emph{rolling} time window.
+
+The output provides a unique index per group and the minimum/maximum date that
+define the resulting aggregated episode or interval.
 }
+\details{
+\subsection{How the function works}{
+
+The behaviour depends on whether \code{date_end} is supplied:
+\subsection{1. \strong{Interval-based grouping (start + end dates)}}{
+
+If both \code{date_start} and \code{date_end} are provided, the function identifies
+overlapping intervals within the same \code{group_vars} grouping. Any intervals
+that overlap are combined into a single episode.
+
+This method is typically used for:
+\itemize{
+\item Hospital spells (HES/SUS)
+\item Contact periods or inpatient stays
+}
+}
+
+\subsection{2. \strong{Event-based grouping (single-date events)}}{
+
+If only \code{date_start} is supplied, records are grouped using a \strong{time window}
+defined by the \code{window} argument.
+
+Two approaches are supported:
+\itemize{
+\item \strong{\code{window_type = "static"}}
+A fixed window is applied starting from the first event in the group. All
+events occurring within the window are grouped until a gap exceeds the
+threshold, at which point a new episode begins.
+\item \strong{\code{window_type = "rolling"}}
+A dynamic window where each event extends the episode end point. An event
+is grouped as long as it occurs within \code{window} days of the most recent
+event in the same episode.
+}
+}
+
+}
+
+\subsection{Handling of missing values}{
+
+Records missing \code{date_start} cannot be grouped and are returned with \code{indx}
+= \code{NA}. These rows are appended back to the final output.
+}
+}
+\section{Workflow context}{
+ how \code{group_time()} might be used in a pipeline
+\strong{1) SGSS specimen data – infection episode grouping (event-based)}
+After organism/specimen harmonisation (e.g., via \code{lookup_recode()}),
+\code{group_time()} groups specimen dates into infection episodes using a defined
+time window. This helps identify clusters of related positive tests for the
+same patient and organism.
+
+\strong{2) HES/SUS inpatient data – continuous spell grouping (interval-based)}
+When start and end dates of inpatient stays are available, \code{group_time()}
+collapses overlapping intervals into a single continuous hospital spell.
+This is used before linking SGSS infection episodes to inpatient activity.
+
+\strong{3) Integration across datasets}
+The outputs from \code{group_time()} are used downstream to determine whether
+infection events fall within or around periods of hospital care,
+enabling combined SGSS–HES/SUS–ECDS analyses.
+}
+
 \examples{
 episode_test <- structure(
   list(

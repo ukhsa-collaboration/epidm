@@ -12,23 +12,59 @@ lookup_recode(
 )
 }
 \arguments{
-\item{src}{a character, vector or column containing the value(s) to be referenced}
+\item{src}{Character vector (or column) of values to recode. Coerced to character if needed.}
 
-\item{type}{a character value to denote the lookup table used}
+\item{type}{Character scalar specifying the lookup to use. One of:
+\code{'species'}, \code{'specimen'}, \code{'inpatient_admission_method'},
+\code{'inpatient_discharge_destination'}, \code{'ecds_destination_code'}, \code{'manual'}.}
 
-\item{.import}{a list  in the order list(new,old) containing the
-values for another lookup table existing in the environment}
+\item{.import}{A two‑element list in the format \code{list(new, old)} used only
+when \code{type = 'manual'}. Each element must be a vector of equal length.}
 }
 \value{
-a list object of the recoded field
+A character vector containing the recoded values, aligned 1:1 with \code{src}.
+Values not present in the lookup are returned unchanged.
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
-A function to call an epidm lookup table and
-recode  where we are aware of a new value.
 
-Built in are  the organism re-classifications and specimen_type groupings
-and a manual mode.
+A function to recode values via named lookup tables (i.e call an epidm lookup table and
+recode where we are aware of a new value). It routes to a specific lookup based on type,
+returning a character vector where each input value has been mapped to its corresponding
+replacement. If a value is not found in the lookup then the original value is returned.
+
+Built‑in lookups include:
+\itemize{
+\item \strong{\code{species}}: Uses the \code{respeciate_organism} dataset to standardise and
+reclassify organism names (e.g., historic → current nomenclature). This
+supports consistent reporting across SGSS and other laboratory datasets.
+\item \strong{\code{specimen}}: Uses the \code{specimen_type_grouping} dataset to assign raw
+laboratory specimen types into harmonised specimen groups. This enables
+consistent grouping for reporting, aggregation, and filtering.
+\item \strong{\code{genus_gram_stain}}: Uses the \code{genus_gram_stain} lookup table, which
+provides Gram stain classifications by bacterial genus. This reference is
+manually maintained against the UKHSA SGSS database and supports rapid
+filtering and high‑level organism categorisation. Users should raise an
+issue or submit a pull request to the \code{epidm} GitHub repository if
+an organism/genus is missing.
+\item \strong{\code{lab_data}}: Uses the \code{lab_data} lookup dataset for harmonising
+laboratory code systems and internal SGSS mappings, supporting standardised
+laboratory result interpretation within surveillance pipelines.
+\item \strong{\code{inpatient_admission_method}}: Uses the internal lookup table
+\code{epidm:::group_inpatient_admission_method} to categorise raw hospital
+admission method codes into operationally meaningful groups.
+\item \strong{\code{inpatient_discharge_destination}}: Uses the internal table
+\code{epidm:::group_inpatient_discharge_destination} to group hospital discharge
+destination codes into standardised categories for inpatient pathway
+analysis.
+\item \strong{\code{ecds_destination_code}}: Uses the internal table
+\code{epidm:::group_ecds_discharge_destination}, providing grouped mappings for
+ECDS (Emergency Care Data Set) discharge codes.
+\item \strong{\code{manual}}: Allows the user to supply their own lookup through
+\code{.import = list(new, old)}. This is useful when working with local,
+provisional, or evolving code sets not yet included in the package’s
+centralised lookup tables.
+}
 }
 \examples{
 df <- data.frame(

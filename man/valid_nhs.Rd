@@ -7,26 +7,46 @@
 valid_nhs(nhs_number)
 }
 \arguments{
-\item{nhs_number}{a vector}
+\item{nhs_number}{A vector of values to validate. Each element is coerced to
+character for length checking and digit extraction.}
 }
 \value{
-a vector, 1 if NHS number is valid, 0 if not valid
+A numeric vector of the same length as \code{nhs_number} containing:
+\itemize{
+\item \code{1} if the value is a valid NHS number
+\item \code{0} otherwise
+}
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
 
-Check if NHS numbers are valid based on the checksum algorithm
+Validates NHS numbers using the \strong{NHS checksum} applied to the
+first 9 digits and compared with the 10th digit. Inputs that are
+not exactly \strong{10 numeric characters} are invalid. Numbers made of the \strong{same
+repeated digit} (e.g., \code{"1111111111"}, \code{"0000000000"}) are also rejected.
+}
+\details{
+\strong{Algorithm (summary):}
+\enumerate{
+\item Take the first 9 digits and multiply by weights \strong{10 down to 2} (i.e.,
+d1×10 + d2×9 + … + d9×2).
+\item Compute \code{11 - (sum \%\% 11)} → this is the \strong{expected check digit}.
+\item If the expected check digit is \strong{11}, treat as \strong{0}.
+\item Compare with the \strong{10th digit}. If they match, the number is valid.
+}
 
-This uses the first 9 digits, multiplied by 10 down to 2 eg digit 1x10, d2x9
+Additional guards implemented:
+\itemize{
+\item If the NHS number is \code{NA} or not \strong{10 characters}, it is \strong{invalid}.
+\item If \strong{all 10 digits are identical} (e.g., \code{"1111111111"}), it is \strong{invalid}.
+}
 
-The sum of the products of the first 9 digits are divided by 11
-
-The remainder is checked against the 10th digit
-
-Where the remainder is 11, it is replaced with 0
+The function is vectorised and returns \strong{1 for valid} and \strong{0 for invalid}
+for each element in the input vector.
 }
 \examples{
 test <- floor(runif(1000,1000000000,9999999999))
 valid_nhs(test)
 valid_nhs(9434765919)
+
 }

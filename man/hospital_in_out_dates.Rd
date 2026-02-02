@@ -14,29 +14,39 @@ hospital_in_out_dates(
 )
 }
 \arguments{
-\item{data}{the linked asset holding A&E and Inpatient data}
+\item{data}{A linked table containing A&E and inpatient records (typically the
+output of \code{link_ae_inpatient()}), including person/event identifiers and
+date fields.}
 
-\item{person_id}{the column containing the unique patient ID}
+\item{person_id}{Quoted column name for the unique patient identifier.}
 
-\item{hospital}{a list containing the following items
+\item{hospital}{A named \strong{list} specifying column names (all quoted) for:
 \describe{
-\item{\code{org_code}}{the NHS trust organisation codes}
-\item{\code{event_date}}{the comparison date used; often \code{specimen_date}}
-\item{\code{ae_arrive}}{the ECDS arrival date}
-\item{\code{ae_depart}}{the ECDS discharge date}
-\item{\code{ae_discharge}}{the ECDS discharge status; recommend grouping from \code{epidm::lookup_recode}}
-\item{\code{in_spell_start}}{the HES/SUS spell start date; recommend after \code{epidm::group_time}}
-\item{\code{in_spell_end}}{the HES/SUS spell end date; recommend after \code{epidm::group_time}}
-\item{\code{in_discharge}}{the HES/SUS discharge destination code; recommend grouping from \code{epidm::lookup_recode}}
+\item{\code{org_code}}{Organisation code (optional; used to scope grouping).}
+\item{\code{event_date}}{Index date to compare against (e.g., \code{specimen_date}).}
+\item{\code{ae_arrive}}{ECDS arrival date.}
+\item{\code{ae_depart}}{ECDS departure date.}
+\item{\code{ae_discharge}}{ECDS discharge status (use grouped values if available).}
+\item{\code{in_spell_start}}{Inpatient spell start date.}
+\item{\code{in_spell_end}}{Inpatient spell end date.}
+\item{\code{in_discharge}}{Inpatient discharge destination (grouped recommended).}
 }}
 }
 \value{
-new date columns on the data.table for \code{hospital_in} and \code{hospital_out} and \code{hospital_event_rank}
+A \code{data.table} equal to \code{data} with additional columns:
+\describe{
+\item{\code{hospital_in}}{Derived hospital admission date for the relevant stay.}
+\item{\code{hospital_out}}{Derived hospital discharge date for the relevant stay.}
+\item{\code{hospital_event_rank}}{Rank of suitability of the hospital window for the
+given person/event (1 = most suitable).}
+}
 }
 \description{
-This function helps to determine when a patient has been in
-hospital across  spell aggregation.
-When retaining the final record the following criteria is used:
+Derives per‑patient \strong{hospital entry (\code{hospital_in})} and \strong{exit (\code{hospital_out})}
+dates by reconciling A&E (ECDS) attendances and inpatient (HES/SUS) spells.
+Applies a simple ranking to determine the most relevant hospital period around
+an index event date (e.g., a specimen collection date).
+
 \describe{
 \item{"1"}{Current admissions take priority}
 \item{"2"}{When conflicting on the same day, inpatient admissions take priority over A&E emergency care data}
@@ -44,6 +54,17 @@ When retaining the final record the following criteria is used:
 \item{"4"}{Where a patient has a positive test between two hospital stays the most recent completed hospital stay prior to the test is retained except if the time between these events is greater than 14 days, then the first admission following the test is retained}
 }
 }
+\section{Workflow context}{
+
+Use \code{hospital_in_out_dates()} \strong{after}:
+\itemize{
+\item Linking A&E to inpatient spells (e.g., via \code{link_ae_inpatient()}),
+\item Constructing spells (e.g., \code{group_time()} or \code{cip_spells()}),
+\item Optional code standardisation (e.g., discharge groups
+via \code{lookup_recode()})
+}
+}
+
 \examples{
 \dontrun{
 hospital_in_out_dates(link,

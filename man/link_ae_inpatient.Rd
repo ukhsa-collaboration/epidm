@@ -2,7 +2,7 @@
 % Please edit documentation in R/link_ae_inpatient.R
 \name{link_ae_inpatient}
 \alias{link_ae_inpatient}
-\title{Link A&E to Inpatient records}
+\title{Link A&E (ECDS) records to Inpatient (HES/SUS) spells}
 \usage{
 link_ae_inpatient(
   ae = list(data, record_id = "unique_record_id", nhs_number = "nhs_number",
@@ -17,44 +17,69 @@ link_ae_inpatient(
 )
 }
 \arguments{
-\item{ae}{a list to provide data and columns for the A&E (ECDS) data; all arguments provided quoted unless specified
+\item{ae}{A named \strong{list} describing the A&E (ECDS) input with quoted column names:
 \describe{
-\item{\code{data}}{the ECDS A&E dataset provided unquoted}
-\item{\code{record_id}}{Optional. A unique identifier within the dataset. Can be included in either \code{ae}, \code{inp}, or both. If present in both, each will be retained as separate columns in the output (\verb{_ae} and \verb{_inp})}
-\item{\code{arrival_date}}{the ECDS arrival date}
-\item{\code{departure_date}}{the ECDS discharge date}
-\item{\code{nhs_number}}{the patient NHS number}
-\item{\code{hospital_number}}{the patient Hospital numbers also known as the local patient identifier}
-\item{\code{patient_dob}}{patient date of birth}
-\item{\code{org_code}}{the NHS trust organisation codes}
+\item{\code{data}}{ECDS A&E dataset (unquoted object).}
+\item{\code{record_id}}{Optional unique row id to retain.}
+\item{\code{arrival_date}}{A&E arrival date column.}
+\item{\code{departure_date}}{A&E departure date column.}
+\item{\code{nhs_number}}{NHS number column.}
+\item{\code{hospital_number}}{Local patient identifier column.}
+\item{\code{patient_dob}}{Date of birth column.}
+\item{\code{org_code}}{Provider organisation code column.}
 }}
 
-\item{inp}{a list to provide data and columns for the inpatient (SUS/HES) data
+\item{inp}{A named \strong{list} describing the inpatient (HES/SUS) input with quoted column names:
 \describe{
-\item{\code{data}}{the HES/SUS inpatient dataset provided unquoted}
-\item{\code{record_id}}{Optional. A unique identifier within the dataset. Can be included in either \code{ae}, \code{inp}, or both. If present in both, each will be retained as separate columns in the output (\verb{_ae} and \verb{_inp})}
-\item{\code{spell_start_date}}{a string containing the inpatient (SUS/HES) admission date column name; all arguments provided quoted unless specified}
-\item{\code{spell_id}}{the HES/SUS spell id}
-\item{\code{nhs_number}}{the patient NHS number}
-\item{\code{hospital_number}}{the patient Hospital numbers also known as the local patient identifier}
-\item{\code{patient_dob}}{patient date of birth}
-\item{\code{org_code}}{the NHS trust organisation codes}
+\item{\code{data}}{Inpatient dataset (unquoted object).}
+\item{\code{record_id}}{Optional unique row id to retain.}
+\item{\code{spell_start_date}}{Inpatient spell start/admission date column.}
+\item{\code{spell_id}}{Spell identifier to carry through (e.g., CIP or mega spell id).}
+\item{\code{nhs_number}}{NHS number column.}
+\item{\code{hospital_number}}{Local patient identifier column.}
+\item{\code{patient_dob}}{Date of birth column.}
+\item{\code{org_code}}{Provider organisation code column.}
 }}
 
-\item{.forceCopy}{a boolean to control if you want to copy the dataset before
-linking together}
+\item{.forceCopy}{Logical (default \code{FALSE}).
+If \code{FALSE}, the input is converted to a \code{data.table} and modified by
+reference.
+If \code{TRUE}, the input must already be a \code{data.table}, and the function will
+create an explicit copy to avoid modifying the original object.}
 }
 \value{
-a patient level linked hospital record
+A \strong{linked \code{data.table}} at \strong{patient/spell level} containing:
+\itemize{
+\item Harmonised identifiers (NHS number / hospital number, DOB, org code)
+\item A&E arrival/departure dates
+\item Inpatient spell identifiers and spell start date
+\item (If supplied) preserved \code{record_id} columns (tagged \verb{*_ae} / \verb{*_inp})
+}
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
 
-Link together ECDS A&E records to HES/SUS inpatient records on
-NHS number, Hospital Number and Date of Birth and organisation code.
-To note that the inpatient records should already be aggregated into
-spells at the desired level (standard, CIP or Mega)
+Links Emergency Care Data Set (ECDS) \strong{A&E records} to \strong{inpatient spells}
+(HES/SUS) using patient identifiers (NHS number, hospital number, date of birth),
+organisation code, and a \strong{link date}. The inpatient records should already be
+aggregated to the desired spell level (e.g., provider spell, CIP, or “mega” spell).
+The output is a patient-level linked table suitable for downstream pathway analysis.
 }
+\section{Workflow context}{
+
+Use \code{link_ae_inpatient()} \strong{after}:
+\itemize{
+\item ECDS A&E data are cleaned/standardised (e.g., discharge categories via \code{lookup_recode()}).
+\item Inpatient records have been \strong{aggregated to spells} (e.g., \code{cip_spells()} for continuous inpatient spells).
+}
+
+Use it \strong{before}:
+\itemize{
+\item Rejoining to SGSS infection episodes (e.g., outputs of \code{group_time()}),
+or deriving \code{hospital_in_out_dates} for entry/exit timelines.
+}
+}
+
 \examples{
 \dontrun{
 sample_ae <- data.table::data.table(
