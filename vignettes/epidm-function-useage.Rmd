@@ -5,7 +5,7 @@ output:
     toc: true
     toc_depth: 2
 vignette: >
-  %\VignetteIndexEntry{Creating Patient Identifiers and Time-Based Episodes}
+  %\VignetteIndexEntry{Creating Patient Identifiers and Time-Based Episodes with epidm}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -31,7 +31,7 @@ resolution and clinical episode construction.
 This vignette introduces two key functions:
 
 1. **`uk_patient_id()`**  
-   Generates unique patient identifiers using patient
+   Generates unique patient ids using known patient
    identifiers with multiple staged rules.
 
 2. **`group_time()`**  
