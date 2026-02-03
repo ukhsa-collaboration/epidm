@@ -59,7 +59,7 @@ You must also supply a **list mapping your column names** using the `id = list(.
 
 ## Example usage
 
-```{r ukpid-example, echo=TRUE}
+```{r ukpid-example, echo=TRUE, warning=FALSE}
 # 1) Create example data (shown so readers can reproduce)
 id_test <-
   data.frame(
@@ -170,6 +170,8 @@ Two episode rules are supported:
 |------|---------|
 | **Static window** | Based on the first event only; all events within X days of the **first** event belong to the same episode. |
 | **Rolling window** | The window resets with each event; a new event inside X days of the **previous** event extends the episode. |
+
+## Example usage
 
 ```{r grouptime-example, echo=TRUE}
 # Events example (14‑day static window):
