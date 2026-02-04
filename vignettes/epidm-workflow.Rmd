@@ -24,6 +24,8 @@ This vignette shows a worked example of an R script pipeline for linking Laborat
 - ECDS (A and E attendances)
 - HES or SUS (inpatient provider spells)
 
+All datasets used in this vignette are synthetic. They are designed to mimic the structure and typical fields found in these healthcare datasets, but they are not real extracts and are not intended to be complete. In particular, the synthetic tables contain only the minimum set of variables needed to demonstrate the workflow steps, so they will not include all fields that may be present in SGSS, ECDS, HES, or SUS.
+
 It uses `epidm` functions to:
 
 1. Create a consistent patient identifier across datasets (`uk_patient_id`)
@@ -118,7 +120,11 @@ hes_raw
 
 ## Step 1: Create a patient identifier across datasets
 
-`uk_patient_id()` produces a new `id` field so that SGSS, ECDS and HES or SUS can be joined reliably on a single key.
+`uk_patient_id()` creates a new `id` field that can be used to join SGSS, ECDS and HES or SUS on a single key. 
+
+This is for demonstration purposes only, because the vignette uses small synthetic datasets. In real analyses, the id is not guaranteed to be identical if `uk_patient_id()` is run separately on different sources or at different times, as the resulting grouping and numbering can vary with the records and identifiers available in each input. 
+
+For an example of how to apply `uk_patient_id()` across multiple sources to produce a shared identifier, see Section 3 of "Guide: Staged Patient Matching and Time-based Episode Grouping with EpiDM".
 
 ```{r patient-id}
 sgss <- uk_patient_id(
@@ -330,7 +336,7 @@ link <- link_ae_inpatient2(
 dplyr::glimpse(link)
 ```
 
-## Step 6: Join SGSS events to the linked hospital asset (R join)
+## Step 6: Join SGSS events to the linked hospital asset 
 
 We create an event date column `ev_date` for hospital in and out derivation. We join SGSS infection episodes to hospital linkage by `id`.
 
@@ -387,6 +393,7 @@ if (inherits(hosp_attempt, "try-error")) {
   sgss_hosp <- hosp_attempt
 }
 
+
 sgss_hosp %>%
   select(id, ev_date, organism, hospital_in, hospital_out, hospital_event_rank) %>%
   arrange(id, ev_date)
@@ -396,7 +403,7 @@ sgss_hosp %>%
 
 A simple classification example:
 
-  - `in_hospital`: event is between hospital_in and hospital_out
+- `in_hospital`: event is between hospital_in and hospital_out
 - `hospital_onset`: event is day 3 or later after hospital_in
 
 ```{r infection-timing}
@@ -428,7 +435,7 @@ final
 
 This vignette demonstrated:
 
-  - Consistent patient IDs across SGSS, ECDS and HES or SUS
+- Consistent patient IDs across SGSS, ECDS and HES or SUS
 - SGSS organism and specimen cleaning and episode grouping
 - Inpatient spell cleaning, CIP spell creation, and time grouping
 - R joins for lookup tables and rejoining
