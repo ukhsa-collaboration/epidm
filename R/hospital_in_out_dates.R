@@ -1,6 +1,9 @@
 #' @title Hospital IN/OUT dates
 #'
 #' @description
+#' `r lifecycle::badge('experimental')`
+#'
+#'
 #' Derives per‑patient **hospital entry (`hospital_in`)** and **exit (`hospital_out`)**
 #' dates by reconciling A&E (ECDS) attendances and inpatient (HES/SUS) spells.
 #' Applies a simple ranking to determine the most relevant hospital period around
