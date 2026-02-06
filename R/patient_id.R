@@ -43,18 +43,6 @@
 #' @importFrom stringr word
 #' @importFrom stringi stri_trans_general stri_trans_toupper
 #'
-#' @param data a data.frame or data.table containing the patient data
-#' @param id a named list to provide the column names with identifiers, quoted
-#'  \describe{
-#'    \item{`nhs_number`}{the patient NHS number}
-#'    \item{`hospital_number`}{the patient Hospital numbers also known as the local patient identifier}
-#'    \item{`date_of_birth`}{the patient date of birth}
-#'    \item{`sex_mfu`}{the patient sex or gender field as Male/Female/Unknown}
-#'    \item{`forename`}{the patient forename}
-#'    \item{`surname`}{the patient surname}
-#'    \item{`postcode`}{the patient postcode}
-#'   }
-#'
 #' @section Workflow context:
 #' `uk_patient_id()` is typically used early to harmonise patient identity
 #' across isolates before downstream tasks such as specimen episode grouping

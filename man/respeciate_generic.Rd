@@ -28,8 +28,11 @@ name}
 \item{window}{an integer representing the number of days for which you will
 allow a sample to be respeciated}
 
-\item{.forceCopy}{default FALSE; TRUE will force data.table to take a copy
-instead of editing the data without reference}
+\item{.forceCopy}{Logical (default \code{FALSE}).
+If \code{FALSE}, the input is converted to a \code{data.table} and modified by
+reference.
+If \code{TRUE}, the input must already be a \code{data.table}, and the function will
+create an explicit copy to avoid modifying the original object.}
 }
 \value{
 a data.table with a recharacterised \code{species_col} column

@@ -5,7 +5,7 @@
 \title{Patient ID record grouping}
 \usage{
 uk_patient_id(
-  data,
+  x,
   id = list(nhs_number = "nhs_number", hospital_number = "patient_hospital_number",
     date_of_birth = "date_of_birth", sex_mfu = "sex", forename = "forename", surname =
     "surname", postcode = "postcode"),
@@ -17,17 +17,15 @@ uk_patient_id(
 )
 }
 \arguments{
-\item{data}{a data.frame or data.table containing the patient data}
-
-\item{id}{a named list to provide the column names with identifiers, quoted
+\item{id}{A \strong{named list} of quoted column names:
 \describe{
-\item{\code{nhs_number}}{the patient NHS number}
-\item{\code{hospital_number}}{the patient Hospital numbers also known as the local patient identifier}
-\item{\code{date_of_birth}}{the patient date of birth}
-\item{\code{sex_mfu}}{the patient sex or gender field as Male/Female/Unknown}
-\item{\code{forename}}{the patient forename}
-\item{\code{surname}}{the patient surname}
-\item{\code{postcode}}{the patient postcode}
+\item{\code{nhs_number}}{NHS number.}
+\item{\code{hospital_number}}{Local patient identifier (hospital number).}
+\item{\code{date_of_birth}}{Date of birth.}
+\item{\code{sex_mfu}}{Sex/gender (M/F/Unknown).}
+\item{\code{forename}}{Forename / first name.}
+\item{\code{surname}}{Surname / last name.}
+\item{\code{postcode}}{Patient postcode.}
 }}
 
 \item{.useStages}{optional, default 1:11; set to 1 if you wish patient ID to
@@ -56,39 +54,64 @@ order on the id generation}
 
 \item{.forceCopy}{optional, default FALSE; TRUE will force data.table to take a copy
 instead of editing the data without reference}
+
+\item{data}{A \code{data.frame} or \code{data.table} with patient identifiers.}
 }
 \value{
-A dataframe with one new variable:
+A \code{data.table} with the original columns plus:
 \describe{
-\item{\code{id}}{a unique patient id}
-\item{\code{valid_nhs}}{if retained using argument \code{.keepValidNHS=TRUE}, a
-BOOLEAN containing the result of the NHS checksum validation}
+\item{\code{id}}{Integer patient identifier assigned by staged matching.}
+\item{\code{valid_nhs}}{(Optional) BOOLEAN NHS checksum flag; included when \code{.keepValidNHS = TRUE}.}
 }
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
 
-Groups patient records from multiple isolates with a single integer patientID
-by grouping patient identifiers.
-
-Grouping is based on the following stages:
+Assigns a \strong{single integer \code{id}} to records that belong to the same patient by
+applying a sequence of \strong{deterministic matching stages} across common identifiers
+(NHS number, hospital number, DOB, name, sex, postcode). Identifiers are
+standardised, validated using NHS checksum function, and fuzzy name keys are
+used in later stages.
+'
+Matching is performed in order through the following stages (first match is applied):
 \enumerate{
-\item matching nhs number and date of birth
-\item Hospital number &  Date of Birth
-\item NHS number & Hospital Number
-\item NHS number & Name
-\item Hospital number & Name
-\item Date of Birth & Surname
-\item Sex & Full name
-\item Sex & Year and Month of Birth & Fuzzy Name
-\item Year and Month of Birth & Fuzzy Name
-\item Postcode & Name
-\item Name Swaps (when first and last name are the wrong way around)
+\item NHS number + date of birth
+\item Hospital number + date of birth
+\item NHS number + hospital number
+\item NHS number + surname
+\item Hospital number + surname
+\item Date of birth + surname (only where NHS is invalid/absent)
+\item Sex + full name (forename + surname)
+\item Sex + date of birth + fuzzy name (Soundex; surname + initial)
+\item Date of birth (YYYY-MM) + fuzzy name
+\item Surname/forename + postcode
+\item Name swaps (forename/surname reversed) + date of birth
+}
+
+Use \code{.useStages} to restrict which stages are applied (default: \code{1:11}).
+The function generates a reproducible \code{id} per patient within the sort order;
+you can provide \code{.sortOrder} (e.g., a date column) to make assignment deterministic.
+
+\strong{Validity rules applied:}
+\itemize{
+\item \strong{NHS number} validated using the standard checksum (\code{epidm::valid_nhs()}).
+\item \strong{Hospital number}: excludes known placeholders (e.g., \code{"UNKNOWN"}, \code{"NO PATIENT ID"}).
+\item \strong{DOB}: excludes proxy or missing dates (\code{"1900-01-01"}, \code{"1800-01-01"}, \code{NA}).
+\item \strong{Sex}: normalised to \code{"M"} / \code{"F"}; others → \code{NA}.
+\item \strong{Names}: uppercased, Latin characters normalised; Soundex used for fuzzy matching.
 }
 
 Identifiers are copied over where they are missing or invalid to the grouped
 records.
 }
+\section{Workflow context}{
+
+\code{uk_patient_id()} is typically used early to harmonise patient identity
+across isolates before downstream tasks such as specimen episode grouping
+(\code{group_time()}), dataset linkage (e.g., to HES/SUS/ECDS), and
+epidemiological reporting.
+}
+
 \examples{
 id_test <-
   data.frame(

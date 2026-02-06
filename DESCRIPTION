@@ -26,11 +26,18 @@ Imports:
     stringi,
     stringr,
     utils,
-    lubridate
+    lubridate,
+    knitr,
+    rmarkdown,
+    ggplot2,
+    DiagrammeR
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Suggests: 
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+VignetteBuilder: knitr
