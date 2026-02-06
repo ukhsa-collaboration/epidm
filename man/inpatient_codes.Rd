@@ -39,3 +39,24 @@ This function helps by reshaping long as a separate table.
 Ensuring they're separate allows you to retain source data, and aggregate
 appropriately later.
 }
+\examples{
+inpatient_test <- data.frame(
+  id = c(1053L, 5487L, 8180L),
+  spell_id = c("dwPDw", "iSpUq", "qpgk5"),
+  primary_diagnosis_code = c("K602", "U071-", "I501")
+)
+
+inpatient_codes(
+  x = inpatient_test,
+  field_strings = "diagnosis",
+  patient_id_vars = c("id", "spell_id"),
+  type = "icd10"
+)
+
+inpatient_codes(
+  x = inpatient_test,
+  field_strings = c("procedure_code", "procedure_date"),
+  patient_id_vars = c("id", "spell_id"),
+  type = "opcs"
+)
+}

@@ -42,6 +42,8 @@ given person/event (1 = most suitable).}
 }
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+
 Derives per‑patient \strong{hospital entry (\code{hospital_in})} and \strong{exit (\code{hospital_out})}
 dates by reconciling A&E (ECDS) attendances and inpatient (HES/SUS) spells.
 Applies a simple ranking to determine the most relevant hospital period around
