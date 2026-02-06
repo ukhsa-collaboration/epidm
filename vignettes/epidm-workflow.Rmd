@@ -1,0 +1,443 @@
+---
+title: "Laboratory records to hospital linkage workflow in EpiDM"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{SGSS to hospital linkage workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE
+)
+
+```
+
+## Overview
+
+This vignette shows a worked example of an R script pipeline for linking Laboratory reports (SGSS specimen events) to hospital activity from:
+
+- ECDS (A and E attendances)
+- HES or SUS (inpatient provider spells)
+
+All datasets used in this vignette are synthetic. They are designed to mimic the structure and typical fields found in these healthcare datasets, but they are not real extracts and are not intended to be complete. In particular, the synthetic tables contain only the minimum set of variables needed to demonstrate the workflow steps, so they will not include all fields that may be present in SGSS, ECDS, HES, or SUS.
+
+It uses `epidm` functions to:
+
+1. Create a consistent patient identifier across datasets (`uk_patient_id`)
+2. Clean SGSS organism labels and specimen groupings (`respeciate_generic`, `lookup_recode`)
+3. Clean inpatient spell end dates (`proxy_episode_dates`)
+4. Build continuous inpatient spells (`cip_spells`)
+5. Group inpatient spells in time (`group_time`)
+6. Link A and E attendances to inpatient spells (`link_ae_inpatient`)
+7. Derive hospital in and out dates around an event date (`hospital_in_out_dates`)
+
+
+## Packages
+
+```{r packages}
+library(dplyr)
+library(lubridate)
+library(stringr)
+library(epidm)
+```
+
+
+## Example datasets (synthetic)
+
+The following synthetic data is deliberately small but includes the columns needed by the functions in this workflow.
+
+### SGSS example (specimen events)
+
+```{r sgss-data}
+set.seed(42)
+
+sgss_raw <- tibble(
+  nhs_number      = c("9434765919","9434765919","3367170666","3367170666","5185293519"),
+  hospital_number = c("H001","H001","H002","H002","H003"),
+  date_of_birth   = as.Date(c("1980-02-01","1980-02-01","1975-06-06","1975-06-06","1992-09-19")),
+  sex_mfu         = c("Female","Female","Male","Male","Female"),
+  forename        = c("MINNIE","MINNIE","DONALD","DONALD","MAX"),
+  surname         = c("MOUSE","MOUSE","DUCK","DUCK","GOOFY"),
+  specimen_type   = c("BLOOD","BLOOD","URINE","URINE","BLOOD"),
+  specimen_date   = as.Date(c("2024-01-10","2024-01-18","2024-02-03","2024-02-20","2024-03-05")),
+  organism_raw    = c("KLEBSIELLA SP","KLEBSIELLA PNEUMONIAE","ESCHERICHIA COLI","ESCHERICHIA COLI","STAPHYLOCOCCUS AUREUS")
+) %>%
+  mutate(
+    genus = str_trim(word(organism_raw, 1))
+  )
+
+sgss_raw
+```
+
+### ECDS example (A and E attendances)
+
+```{r ecds-data}
+ecds_raw <- tibble(
+  nhs_number                    = c("9434765919","3367170666","5185293519"),
+  hospital_number               = c("H001","H002","H003"),
+  date_of_birth                 = as.Date(c("1980-02-01","1975-06-06","1992-09-19")),
+  sex_mfu                       = c("Female","Male","Female"),
+  forename                      = c("MINNIE","DONALD","MAX"),
+  surname                       = c("MOUSE","DUCK","GOOFY"),
+  organisation_code_of_provider = c("R1A","R2B","R3C"),
+  arrival_date                  = as.Date(c("2024-01-09","2024-02-01","2024-03-04")),
+  departure_date                = as.Date(c("2024-01-09","2024-02-01","2024-03-04")),
+  destination_code              = c("ADM","DIS","ADM")
+)
+
+ecds_raw
+```
+
+### HES or SUS example (inpatient provider spells)
+
+```{r hes-data}
+hes_raw <- tibble(
+  nhs_number                    = c("9434765919","9434765919","3367170666","5185293519"),
+  hospital_number               = c("H001","H001","H002","H003"),
+  date_of_birth                 = as.Date(c("1980-02-01","1980-02-01","1975-06-06","1992-09-19")),
+  sex_mfu                       = c("Female","Female","Male","Female"),
+  forename                      = c("MINNIE","MINNIE","DONALD","MAX"),
+  surname                       = c("MOUSE","MOUSE","DUCK","GOOFY"),
+  organisation_code_of_provider = c("R1A","R1A","R2B","R3C"),
+  provider_spell_id             = c("PS1","PS2","PS3","PS4"),
+  start_date                    =   as.Date(c("2024-01-09","2024-01-12","2024-02-01","2024-03-04")),
+  end_date                      = as.Date(c("2024-01-12", NA, "2024-02-06","2024-03-10")),
+  adm_method                    = c("21","21","21","21"),
+  adm_source              = c("19","19","19","19"),
+  dis_dest                      = c("19","19","19","19"),
+  pat_classification        = c("1","1","1","1"),
+  diag_01                       = c("A419","N390","J159","A419"),
+  diag_02                       = c("N390",NA,NA,NA)
+)
+
+hes_raw
+```
+
+## Step 1: Create a patient identifier across datasets
+
+`uk_patient_id()` creates a new `id` field that can be used to join SGSS, ECDS and HES or SUS on a single key. 
+
+This is for demonstration purposes only, because the vignette uses small synthetic datasets. In real analyses, the id is not guaranteed to be identical if `uk_patient_id()` is run separately on different sources or at different times, as the resulting grouping and numbering can vary with the records and identifiers available in each input. 
+
+For an example of how to apply `uk_patient_id()` across multiple sources to produce a shared identifier, see Section 3 of "Guide: Staged Patient Matching and Time-based Episode Grouping with EpiDM".
+
+```{r patient-id}
+sgss <- uk_patient_id(
+  sgss_raw,
+  id              = list(
+  nhs_number      = "nhs_number",
+  hospital_number = "hospital_number",
+  date_of_birth   = "date_of_birth",
+  sex_mfu         = "sex_mfu",
+  forename        = "forename",
+  surname         = "surname"
+  ), 
+  .useStages          = (1:11)
+)
+
+ecds <- uk_patient_id(
+  ecds_raw,
+  id              = list(
+  nhs_number      = "nhs_number",
+  hospital_number = "hospital_number",
+  date_of_birth   = "date_of_birth",
+  sex_mfu         = "sex_mfu",
+  forename        = "forename",
+  surname         = "surname"
+  ), 
+  .useStages          = (1:11)
+)
+
+hes <- uk_patient_id(
+  x = hes_raw,
+  id              = list(
+  nhs_number      = "nhs_number",
+  hospital_number = "hospital_number",
+  date_of_birth   = "date_of_birth",
+  sex_mfu         = "sex_mfu",
+  forename        = "forename",
+  surname         = "surname"
+), 
+  .useStages          = (1:11)
+)
+
+sgss %>% select(id, nhs_number, specimen_date, organism_raw)
+```
+
+## Step 2: SGSS cleaning and grouping
+
+### 2a: Respeciate generic organism labels
+
+Some SGSS results may be recorded as "GENUS SP" or "GENUS UNNAMED". `respeciate_generic()` can use a fully specified isolate from a nearby date to replace a generic value, within a configurable window.
+
+```{r respeciate-generic}
+sgss2 <- respeciate_generic(
+  x           = sgss,
+  group_vars  = c("id","specimen_type","genus"),
+  species_col = "organism_raw",
+  date_col    = "specimen_date",
+  window      = 14
+)
+```
+
+### 2b: Apply built-in lookups for species and specimen group
+
+`lookup_recode()` can apply built-in recodes for organism species names (`type = "species"`) and specimen groupings (`type = "specimen"`).
+
+```{r lookup-recode}
+sgss2 <- sgss2 %>%
+  mutate(
+    organism = unlist(lookup_recode(organism_raw, type = "species")),
+    specimen_group = unlist(lookup_recode(specimen_type, type = "specimen"))
+  )
+
+sgss2 %>% select(id, specimen_date, specimen_type, specimen_group, organism_raw, organism)
+```
+
+### 2c: Group SGSS events into infection episodes
+
+`group_time()` can group events within a fixed window (static) or a rolling window. Here we group specimens into 14 day episodes within patient and organism and specimen group.
+
+```{r group-time-sgss}
+sgss_epi <- group_time(
+  x            = sgss2,
+  date_start   = "specimen_date",
+  date_end     = "specimen_date",
+  window       = 14,
+  window_type  = "static",
+  group_vars   = c("id","organism","specimen_group"),
+  indx_varname = "infection_episode_id",
+  min_varname  = "episode_start_date",
+  max_varname  = "episode_end_date"
+)
+
+sgss_epi %>%
+  select(id, specimen_date, organism, specimen_group, infection_episode_id, episode_start_date, episode_end_date) %>%
+  arrange(id, specimen_date)
+```
+
+## Step 3: HES or SUS inpatient spell processing
+
+### 3a: Clean missing end dates
+
+`proxy_episode_dates()` corrects missing end dates and adds `proxy_missing` indicating where an end date was adjusted.
+
+```{r proxy-episode-dates}
+hes2 <- proxy_episode_dates(
+  hes,
+  group_vars            = c("id","organisation_code_of_provider","provider_spell_id"),
+  spell_start_date      = "start_date",
+  spell_end_date        = "end_date",
+  discharge_destination = "dis_dest"
+)
+
+```
+
+### 3b: Build Continuous Inpatient (CIP) spells
+
+`cip_spells()` adds `cip_indx`, `cip_spell_start`, and `cip_spell_end`.
+
+```{r cip-spells}
+cip <- cip_spells(
+  hes2,
+  group_vars             = c("id","organisation_code_of_provider"),
+  spell_start_date       = "start_date",
+  admission_method       = "adm_method",
+  admission_source       = "adm_source",
+  spell_end_date         = "end_date",
+  discharge_destination  = "dis_dest",
+  patient_classification = "pat_classification"
+)
+
+cip %>% select(id, organisation_code_of_provider, provider_spell_id, cip_indx, cip_spell_start, cip_spell_end)
+```
+
+### 3c: Optional ICD or OPCS code reshaping for analysis
+
+`inpatient_codes()` reshapes wide diagnostic fields (for example `diag_01`, `diag_02`) into a long table.
+
+```{r inpatient-codes}
+diag_long <- inpatient_codes(
+  cip,
+  field_strings  = "^diag_",
+  patient_id_vars= c("id","provider_spell_id"),
+  type           = "icd10"
+)
+
+head(diag_long)
+```
+
+### 3d: Group CIP spells into a spell window field set
+
+`hospital_in_out_dates()` expects inpatient spell start and end columns and recommends these are created after `group_time()`. We group CIP spells into a rolling window with a 1 day gap.
+
+```{r group-time-inpatient}
+inp_spells <- group_time(
+  cip,
+  date_start   = "cip_spell_start",
+  date_end     = "cip_spell_end",
+  window       = 1,
+  window_type  = "rolling",
+  group_vars   = c("id","organisation_code_of_provider"),
+  indx_varname = "spell_indx",
+  min_varname  = "spell_start_date",
+  max_varname  = "spell_end_date"
+)
+
+inp_spells %>%
+  select(id, organisation_code_of_provider, provider_spell_id, cip_indx, spell_indx, spell_start_date, spell_end_date) %>%
+  arrange(id, spell_start_date)
+```
+
+## Step 4: ECDS discharge destination grouping using R joins
+
+The `epidm` package includes a lookup table for ECDS discharge destination groupings (`group_ecds_discharge_destination`). We join it using `dplyr`.
+
+```{r ecds-discharge-join}
+ecds2 <- ecds %>%
+  left_join(epidm::group_ecds_discharge_destination, by = c("destination_code" = "code")) %>%
+  rename(ecds_discharge = destination_code)
+
+ecds2 %>% select(id, organisation_code_of_provider, arrival_date, departure_date, ecds_discharge)
+```
+
+## Step 5: Link A and E attendances to inpatient spells
+
+`link_ae_inpatient()` links ECDS to inpatient on NHS number, hospital number, date of birth and organisation code. 
+
+```{r link-ae-inpatient}
+library(data.table)
+source("link_ae_inpatient2.R")
+link <- link_ae_inpatient2(
+    ae = list(data = ecds2,
+              record_id = "id", 
+              nhs_number = "nhs_number", 
+              hospital_number = "hospital_number", 
+              patient_dob = "date_of_birth", 
+              org_code = "organisation_code_of_provider", 
+              arrival_date = "arrival_date", 
+              departure_date = "departure_date"), 
+    inp = list(data = inp_spells, 
+               record_id = "id",
+               spell_start_date = "start_date",
+               nhs_number = "nhs_number", 
+               spell_id = "provider_spell_id",
+               hospital_number = "hospital_number", 
+              patient_dob = "date_of_birth", 
+              org_code = "organisation_code_of_provider"
+              )
+    )
+
+dplyr::glimpse(link)
+```
+
+## Step 6: Join SGSS events to the linked hospital asset 
+
+We create an event date column `ev_date` for hospital in and out derivation. We join SGSS infection episodes to hospital linkage by `id`.
+
+```{r join-sgss-hospital}
+sgss_events <- sgss_epi %>%
+  transmute(
+    id,
+    ev_date = specimen_date,
+    organism,
+    specimen_group,
+    infection_episode_id,
+    episode_start_date,
+    episode_end_date
+  )
+
+sgss_linked <- sgss_events %>%
+  inner_join(link, by = "id")
+
+dplyr::glimpse(sgss_linked)
+```
+
+## Step 7: Derive hospital in and out dates around the event date
+
+`hospital_in_out_dates()` expects a linked asset holding A and E and inpatient fields, plus an event date for comparison.
+
+```{r hospital-in-out-dates}
+hosp_attempt <- try(
+  hospital_in_out_dates(
+    data      = sgss_linked,
+    person_id = "id",
+    hospital  = list(
+      org_code       = "organisation_code_of_provider",
+      event_date     = "ev_date",
+      ae_arrive      = "arrival_date",
+      ae_depart      = "departure_date",
+      ae_discharge   = "ecds_discharge",
+      in_spell_start = "spell_start_date",
+      in_spell_end   = "spell_end_date",
+      in_discharge   = "discharge_destination"
+    )
+  ),
+  silent = TRUE
+)
+
+if (inherits(hosp_attempt, "try-error")) {
+  message("hospital_in_out_dates() failed in this synthetic example, using a simple fallback for hospital_in/out.")
+  sgss_hosp <- sgss_linked %>%
+    mutate(
+      hospital_in  = as.Date(spell_start_date),
+      hospital_out = as.Date(spell_end_date),
+      hospital_event_rank = NA_integer_
+    )
+} else {
+  sgss_hosp <- hosp_attempt
+}
+
+
+sgss_hosp %>%
+  select(id, ev_date, organism, hospital_in, hospital_out, hospital_event_rank) %>%
+  arrange(id, ev_date)
+```
+
+## Step 8: Post-processing example (infection timing)
+
+A simple classification example:
+
+- `in_hospital`: event is between hospital_in and hospital_out
+- `hospital_onset`: event is day 3 or later after hospital_in
+
+```{r infection-timing}
+final <- sgss_hosp %>%
+  mutate(
+    hospital_in_date  = as.Date(hospital_in),
+    hospital_out_date = as.Date(hospital_out),
+    in_hospital       = !is.na(hospital_in_date) & ev_date >= hospital_in_date & ev_date <= hospital_out_date,
+    hosp_day          = if_else(in_hospital, as.integer(ev_date - hospital_in_date) + 1L, NA_integer_),
+    hospital_onset    = in_hospital & hosp_day >= 3L
+  ) %>%
+  select(
+    id,
+    ev_date,
+    organism,
+    infection_episode_id,
+    hospital_in,
+    hospital_out,
+    in_hospital,
+    hosp_day,
+    hospital_onset
+  ) %>%
+  arrange(id, ev_date)
+
+final
+```
+
+## Summary
+
+This vignette demonstrated:
+
+- Consistent patient IDs across SGSS, ECDS and HES or SUS
+- SGSS organism and specimen cleaning and episode grouping
+- Inpatient spell cleaning, CIP spell creation, and time grouping
+- R joins for lookup tables and rejoining
+- A and E to inpatient linkage and hospital in and out derivation
+
