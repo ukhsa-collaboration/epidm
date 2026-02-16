@@ -405,7 +405,7 @@ lnk.dt_combined_grouped <- epidm::group_time(
   date_start = 'common_date',
   window = 30,
   window_type = 'rolling',
-  indx_varname = 'dedupe_key',
+  indx_varname = 'dedup_key',
   group_vars = c(
     "id"
   )
