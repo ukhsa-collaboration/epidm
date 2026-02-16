@@ -19,6 +19,7 @@ knitr::opts_chunk$set(
 )
 library(epidm)
 library(data.table)
+library(dplyr)
 
 ```
 
@@ -283,9 +284,59 @@ print(head(spell_episodes), row.names = FALSE)
 # Using **uk_patient_id()** and **group_time()** together with SGSS and CIMS data
 
 ```{r full-example, echo=TRUE}
+# Example data generation
+
+# Helper to make plausible 10-digit NHS-like strings
+mk_nhs <- function(n) {
+  apply(matrix(sample(0:9, n * 10, replace = TRUE), nrow = n, byrow = TRUE),
+        1, paste0, collapse = "")
+}
+
+# A small "people" frame to borrow shared attributes from
+persons <- tibble::tibble(
+  id_person     = 1:6,
+  nhsnumber     = c(mk_nhs(5), NA_character_),   # include one missing NHS
+  forename      = c("John", "Jane", "Sam", "Aisha", "Maya", "John"),
+  surname       = c("Smith", "Doe", "Patel", "Khan", "Brown", "Smyth"),  # one spelling variant
+  date_of_birth = as.Date(c("1980-03-14","1991-11-02","1985-07-28","2002-01-09","2010-05-30","1980-03-14")),
+  sex           = c("M","F","M","F","U","M"),
+  postcode      = c("SW1A 1AA","E1 6AN","B1 1AA","M1 1AE","CF10 1EP","SW1A1AA") # one without space
+)
+
+# --- SGSS-like data: multiple specimens per person, some within 30 days ------
+sgss_data <- persons |> 
+  # duplicate person 1 (two specimens), and include others
+  slice(c(1, 1, 2, 3, 4, 5, 6)) |> 
+  mutate(
+    CDR_OPIE_ID            = row_number() + 1000L,
+    earliest_specimen_date = as.Date("2023-10-01") + c(0, 10, 5, 15, 40, 3, 2),
+    GROUP_A_STREP_PCR      = c("Detected","Not detected","Detected","Detected","Not detected","Detected","Detected"),
+    third                  = c("emm1","emm1","emm3","emm12","",NA,"emm89")
+  ) |> 
+  select(
+    CDR_OPIE_ID, nhsnumber, forename, surname, date_of_birth, sex,
+    postcode, earliest_specimen_date, GROUP_A_STREP_PCR, third
+  )
+
+# --- CIMS-like data: case notifications, some within 30 days of SGSS ----------
+cims_data <- persons |> 
+  # person 3 appears twice, person 1 appears once etc.
+  slice(c(1, 2, 3, 3, 4, 6)) %>%
+  mutate(
+    Case_identifier = row_number() + 2000L,
+    Date_entered    = as.Date("2023-10-05") + c(0,  6,  18,  50,  35,  1),
+    Infection       = c("iGAS","Scarlet fever","iGAS","iGAS","Scarlet fever","iGAS")
+  ) |> 
+  select(
+    Case_identifier, nhsnumber, forename, surname, date_of_birth,
+    sex, postcode, Date_entered, Infection
+  )
+
+# Example start:
+
 # Example of importing SGSS and CIMS data ready for linkage
 lnk.data_sgss <- sgss_data
-lnk.data_sgss <- cims_data
+lnk.data_cims <- cims_data
 
 # Update SGSS column classes so they match with CIMS
 lnk.data_sgss <- lnk.data_sgss |>
