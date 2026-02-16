@@ -40,12 +40,17 @@ Ensuring they're separate allows you to retain source data, and aggregate
 appropriately later.
 }
 \examples{
+
+# Example inpatient dataset
 inpatient_test <- data.frame(
   id = c(1053L, 5487L, 8180L),
   spell_id = c("dwPDw", "iSpUq", "qpgk5"),
-  primary_diagnosis_code = c("K602", "U071-", "I501")
+  primary_diagnosis_code = c("K602", "U071-", "I501"),
+  procedure_code = c("H201", "H251", NA),
+  procedure_date = as.Date(c("2023-01-01", "2023-01-04", NA))
 )
 
+# ICD-10 cleaning example
 inpatient_codes(
   x = inpatient_test,
   field_strings = "diagnosis",
@@ -53,10 +58,12 @@ inpatient_codes(
   type = "icd10"
 )
 
+# OPCS cleaning example
 inpatient_codes(
   x = inpatient_test,
   field_strings = c("procedure_code", "procedure_date"),
   patient_id_vars = c("id", "spell_id"),
   type = "opcs"
 )
+
 }
