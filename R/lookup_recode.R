@@ -102,6 +102,7 @@
 #'                respeciate_organism$previous_organism_name)
 #'   )
 #'
+#' @export
 
 lookup_recode <- function(src,
                           type=c('species',
