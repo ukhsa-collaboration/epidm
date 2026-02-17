@@ -49,7 +49,7 @@
 #' (`group_time()`), dataset linkage (e.g., to HES/SUS/ECDS), and
 #' epidemiological reporting.
 #'
-#' @param data A `data.frame` or `data.table` with patient identifiers.
+#' @param x A `data.frame` or `data.table` with patient identifiers.
 #' @param id A **named list** of quoted column names:
 #' \describe{
 #'   \item{`nhs_number`}{NHS number.}
@@ -156,7 +156,7 @@
 #'
 #'
 #' uk_patient_id(
-#'   data = id_test,
+#'   x = id_test,
 #'   id = list(
 #'     nhs_number = 'nhs_number',
 #'     hospital_number = 'local_patient_identifier',

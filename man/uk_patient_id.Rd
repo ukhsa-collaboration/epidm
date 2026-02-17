@@ -17,6 +17,8 @@ uk_patient_id(
 )
 }
 \arguments{
+\item{x}{A \code{data.frame} or \code{data.table} with patient identifiers.}
+
 \item{id}{A \strong{named list} of quoted column names:
 \describe{
 \item{\code{nhs_number}}{NHS number.}
@@ -54,8 +56,6 @@ order on the id generation}
 
 \item{.forceCopy}{optional, default FALSE; TRUE will force data.table to take a copy
 instead of editing the data without reference}
-
-\item{data}{A \code{data.frame} or \code{data.table} with patient identifiers.}
 }
 \value{
 A \code{data.table} with the original columns plus:
@@ -169,7 +169,7 @@ id_test <-
 
 
 uk_patient_id(
-  data = id_test,
+  x = id_test,
   id = list(
     nhs_number = 'nhs_number',
     hospital_number = 'local_patient_identifier',
