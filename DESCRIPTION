@@ -5,7 +5,8 @@ Authors@R:
     c(
         person("Alex", "Bhattacharya", email = "alex.bhatt@gmail.com", role = c("aut", "cre")),
         person("Alice", "Graham", email = "graham.alice@gmail.com", role = c("aut"), comment = c(ORCID = "0000-0003-3000-2771")),
-        person("Harshana", "Liyanage", email = "harshanal@gmail.com", role = c("aut"), comment = c(ORCID = "0000-0001-9738-6349"))
+        person("Harshana", "Liyanage", email = "harshanal@gmail.com", role = c("aut"), comment = c(ORCID = "0000-0001-9738-6349")),
+        person("Frederick", "Sloots", email = "frederick.sloots@ukhsa.gov.uk", role = c("aut"), comment = c(ORCID = "0009-0006-4927-8937"))
     )
 Description: Contains utilities and functions for the cleaning, processing and
     management of patient level public health data for surveillance
