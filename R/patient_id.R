@@ -154,7 +154,7 @@
 #'                       "2022-01-27","2022-01-28")
 #'   )
 #'
-#' data.tabe::setDT(id_test)
+#' data.table::setDT(id_test)
 #'
 #' uk_patient_id(
 #'   x = id_test,
