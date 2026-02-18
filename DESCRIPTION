@@ -11,8 +11,8 @@ Authors@R:
 Description: Contains utilities and functions for the cleaning, processing and
     management of patient level public health data for surveillance
     and analysis held by the UK Health Security Agency, UKHSA.
-URL: https://github.com/alexbhatt/epidm, https://alexbhatt.github.io/epidm/
-BugReports: https://github.com/alexbhatt/epidm/issues
+URL: https://github.com/ukhsa-collaboration/epidm
+BugReports: https://github.com/ukhsa-collaboration/epidm/issues
 License: GPL (>= 3)
 Depends:
     R (>= 4.4.0)
