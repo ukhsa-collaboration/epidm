@@ -1,8 +1,12 @@
 # Hospital IN/OUT dates
 
-This function helps to determine when a patient has been in hospital
-across spell aggregation. When retaining the final record the following
-criteria is used:
+**\[experimental\]**
+
+Derives per‑patient **hospital entry (`hospital_in`)** and **exit
+(`hospital_out`)** dates by reconciling A&E (ECDS) attendances and
+inpatient (HES/SUS) spells. Applies a simple ranking to determine the
+most relevant hospital period around an index event date (e.g., a
+specimen collection date).
 
 - "1":
 
@@ -42,56 +46,79 @@ hospital_in_out_dates(
 
 - data:
 
-  the linked asset holding A&E and Inpatient data
+  A linked table containing A&E and inpatient records (typically the
+  output of [`link_ae_inpatient()`](link_ae_inpatient.md)), including
+  person/event identifiers and date fields.
 
 - person_id:
 
-  the column containing the unique patient ID
+  Quoted column name for the unique patient identifier.
 
 - hospital:
 
-  a list containing the following items
+  A named **list** specifying column names (all quoted) for:
 
   `org_code`
 
-  :   the NHS trust organisation codes
+  :   Organisation code (optional; used to scope grouping).
 
   `event_date`
 
-  :   the comparison date used; often `specimen_date`
+  :   Index date to compare against (e.g., `specimen_date`).
 
   `ae_arrive`
 
-  :   the ECDS arrival date
+  :   ECDS arrival date.
 
   `ae_depart`
 
-  :   the ECDS discharge date
+  :   ECDS departure date.
 
   `ae_discharge`
 
-  :   the ECDS discharge status; recommend grouping from
-      [`epidm::lookup_recode`](lookup_recode.md)
+  :   ECDS discharge status (use grouped values if available).
 
   `in_spell_start`
 
-  :   the HES/SUS spell start date; recommend after
-      [`epidm::group_time`](group_time.md)
+  :   Inpatient spell start date.
 
   `in_spell_end`
 
-  :   the HES/SUS spell end date; recommend after
-      [`epidm::group_time`](group_time.md)
+  :   Inpatient spell end date.
 
   `in_discharge`
 
-  :   the HES/SUS discharge destination code; recommend grouping from
-      [`epidm::lookup_recode`](lookup_recode.md)
+  :   Inpatient discharge destination (grouped recommended).
 
 ## Value
 
-new date columns on the data.table for `hospital_in` and `hospital_out`
-and `hospital_event_rank`
+A `data.table` equal to `data` with additional columns:
+
+- `hospital_in`:
+
+  Derived hospital admission date for the relevant stay.
+
+- `hospital_out`:
+
+  Derived hospital discharge date for the relevant stay.
+
+- `hospital_event_rank`:
+
+  Rank of suitability of the hospital window for the given person/event
+  (1 = most suitable).
+
+## Workflow context
+
+Use `hospital_in_out_dates()` **after**:
+
+- Linking A&E to inpatient spells (e.g., via
+  [`link_ae_inpatient()`](link_ae_inpatient.md)),
+
+- Constructing spells (e.g., [`group_time()`](group_time.md) or
+  [`cip_spells()`](cip_spells.md)),
+
+- Optional code standardisation (e.g., discharge groups via
+  [`lookup_recode()`](lookup_recode.md))
 
 ## See also
 

@@ -2,16 +2,11 @@
 
 **\[stable\]**
 
-Check if NHS numbers are valid based on the checksum algorithm
-
-This uses the first 9 digits, multiplied by 10 down to 2 eg digit 1x10,
-d2x9
-
-The sum of the products of the first 9 digits are divided by 11
-
-The remainder is checked against the 10th digit
-
-Where the remainder is 11, it is replaced with 0
+Validates NHS numbers using the **NHS checksum** applied to the first 9
+digits and compared with the 10th digit. Inputs that are not exactly
+**10 numeric characters** are invalid. Numbers made of the **same
+repeated digit** (e.g., `"1111111111"`, `"0000000000"`) are also
+rejected.
 
 ## Usage
 
@@ -23,11 +18,39 @@ valid_nhs(nhs_number)
 
 - nhs_number:
 
-  a vector
+  A vector of values to validate. Each element is coerced to character
+  for length checking and digit extraction.
 
 ## Value
 
-a vector, 1 if NHS number is valid, 0 if not valid
+A numeric vector of the same length as `nhs_number` containing:
+
+- `1` if the value is a valid NHS number
+
+- `0` otherwise
+
+## Details
+
+**Algorithm (summary):**
+
+1.  Take the first 9 digits and multiply by weights **10 down to 2**
+    (i.e., d1×10 + d2×9 + … + d9×2).
+
+2.  Compute `11 - (sum %% 11)` → this is the **expected check digit**.
+
+3.  If the expected check digit is **11**, treat as **0**.
+
+4.  Compare with the **10th digit**. If they match, the number is valid.
+
+Additional guards implemented:
+
+- If the NHS number is `NA` or not **10 characters**, it is **invalid**.
+
+- If **all 10 digits are identical** (e.g., `"1111111111"`), it is
+  **invalid**.
+
+The function is vectorised and returns **1 for valid** and **0 for
+invalid** for each element in the input vector.
 
 ## Examples
 

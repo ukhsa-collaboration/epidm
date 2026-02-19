@@ -1,19 +1,18 @@
-# Epidemiological Data Management (epidm)
+# epidm
 
-The goal of `epidm` is provide standard methods for the management and
-transformation of UK Public Health data.
-
-[The full function guide can be found
-here](https://alexbhatt.github.io/epidm/)
+`epidm` provides standard methods for the management and transformation
+of UK Public Health data in R
 
 ## Installation
 
-Available via CRAN or you can download the development version via
-[GitHub](https://github.com/alexbhatt/epidm)
+epiviz can be installed from GitHub using the following code:
 
 ``` r
-install.packages("epidm")
-devtools::install_github("alexbhatt/epidm")
+# Install epidm
+remotes::install_github('ukhsa-collaboration/epidm')
+
+# To install the development version
+remotes::install_github("ukhsa-collaboration/epidm@dev")
 ```
 
 ## Purpose

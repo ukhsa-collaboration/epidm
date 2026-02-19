@@ -1,0 +1,483 @@
+# Guide: Staged Patient Matching and Time-based Episode Grouping with EpiDM
+
+## Introduction
+
+The **epidm** R package provides utilities to support patient identity
+resolution and clinical episode construction.
+
+This vignette introduces two key functions:
+
+1.  **[`uk_patient_id()`](../reference/uk_patient_id.md)**  
+    Identifying patients and generating unique patient ids using known
+    patient identifiers with multiple staged rules.
+
+2.  **[`group_time()`](../reference/group_time.md)**  
+    Groups time intervals into clinically meaningful episodes (static or
+    rolling windows).
+
+Both functions are designed for **healthcare data**, for example SGSS,
+HES/SUS data and ECDS data where repeated records across systems must be
+linked or aggregated.
+
+## 1. `uk_patient_id()` function
+
+### Input Requirements
+
+A dataset should ideally contain:
+
+- NHS number
+- Hospital number
+- Date of birth
+- Sex
+- Forename
+- Surname
+- Postcode
+
+You must also supply a **list mapping your column names** using the
+`id = list(...)` argument.
+
+### Example usage
+
+``` r
+# 1) Create example data
+id_test <-
+  data.frame(
+    stringsAsFactors = FALSE,
+    record_id = c(1L,2L,3L,4L,
+                  5L,6L,7L,8L,9L,10L,11L,12L,13L,14L,15L,
+                  16L,17L,18L,19L,20L,21L,22L,23L,24L),
+    nhs_number = c(9435754422,
+                   9435754422,NA,9435754422,5555555555,NA,
+                   9435773982,NA,9999999999,NA,9435773982,NA,
+                   9435802508,9435802508,NA,NA,9435802508,9435802508,NA,
+                   3333333333,NA,9999999999,9435817777,
+                   9435817777),
+    local_patient_identifier = c(NA,"IG12067",
+                                 NA,NA,"IG12067","IG12067","KR2535","KR2535",
+                                 "KR2535",NA,NA,NA,"UK8734","UK8734",NA,NA,
+                                 "UK8734","UK8734",NA,NA,"JH45204",
+                                 "HS45202","HS45202","JH45204"),
+    patient_birth_date = c("1993-07-16",
+                           "1993-07-16","1993-07-16","1993-07-16",
+                           "1993-07-16",NA,"1967-02-10",NA,"1967-02-10",NA,NA,
+                           "1967-02-10",NA,NA,"1952-10-22","1952-10-22",
+                           "1952-10-22",NA,"1947-09-14","1947-09-14",
+                           "1947-09-14","1947-09-14","1947-09-14",
+                           "1947-09-14"),
+    sex = c("Male","Male",
+            "Male","Male",NA,"Male","Female","Female",
+            "Female","Female","Female","Female","Male",
+            "Male","Male","Male","Male","Male","Male",
+            "Male","Male","Male",NA,"Male"),
+    forename = c(NA,"DENNIS",
+                 NA,NA,"DENNIS",NA,"ELLIE","ELLIE",NA,
+                 "ELLIE","ELLIE","ELLIE","IAN","IAN","MALCOLM",
+                 "IAN","IAN",NA,"GRANT","ALAN","ALAN","ALAN",
+                 "GRANT","ALAN"),
+    surname = c(NA,"NEDRY",
+                "NEDRY",NA,"NEDRY","NEDRY","SATTLER","SATTLER",
+                NA,"SATTLER","SATTLER","SATTLER","M",NA,
+                "IAN","MALCOLM","MALCOLM",NA,"ALAN","GRANT",
+                "GRANT","GRANT","ALAN","GRANT"),
+    postcode = c("HA4 0FF",
+                 "HA4 0FF","HA4 0FF",NA,"HA4 0FF","HA4 0FF",
+                 "L3 1DZ","L3 1DZ","L3 1DZ","L3 1DZ",NA,"L3 1DZ",
+                 "BN14 9EP",NA,"BN14 9EP",NA,NA,NA,"CW6 9TX",
+                 "CW6 9TX",NA,NA,NA,NA),
+    specimen_date = c("2024-08-14",
+                      "2023-02-03","2023-02-07","2023-02-04",
+                      "2023-02-09","2024-08-14","2021-03-28","2021-03-28",
+                      "2021-03-28","2021-03-28","2021-03-28",
+                      "2021-03-28","2024-07-06","2024-07-06","2024-07-06",
+                      "2023-10-31","2023-10-31","2023-10-31",
+                      "2022-01-23","2022-01-24","2022-01-25","2022-01-26",
+                      "2022-01-27","2022-01-28")
+  )
+
+# 2) Run uk_patient_id()
+result_id <- uk_patient_id(
+  id_test,
+  id = list(
+    nhs_number    = 'nhs_number',
+    hospital_number = 'local_patient_identifier',
+    date_of_birth = 'patient_birth_date',
+    sex_mfu       = 'sex',
+    forename      = 'forename',
+    surname       = 'surname',
+    postcode      = 'postcode'
+  ),
+  .useStages   = 1:11,      # optional
+  .keepStages  = FALSE,     # optional
+  .keepValidNHS = FALSE     # optional
+)
+
+# 3) Show a preview
+print(head(result_id), row.names = FALSE)
+#>     id record_id nhs_number local_patient_identifier patient_birth_date    sex
+#>  <int>     <int>     <char>                   <char>             <char> <char>
+#>      1         1 9435754422                     <NA>         1993-07-16      M
+#>      1         2 9435754422                  IG12067         1993-07-16      M
+#>      1         3       <NA>                     <NA>         1993-07-16      M
+#>      1         4 9435754422                     <NA>         1993-07-16      M
+#>      1         5 5555555555                  IG12067         1993-07-16   <NA>
+#>      1         6       <NA>                  IG12067               <NA>      M
+#>  forename surname postcode specimen_date
+#>    <char>  <char>   <char>        <char>
+#>      <NA>    <NA>   HA40FF    2024-08-14
+#>    DENNIS   NEDRY   HA40FF    2023-02-03
+#>      <NA>   NEDRY   HA40FF    2023-02-07
+#>      <NA>    <NA>     <NA>    2023-02-04
+#>    DENNIS   NEDRY   HA40FF    2023-02-09
+#>      <NA>   NEDRY   HA40FF    2024-08-14
+```
+
+## 2. `group_time()` function
+
+### Input Requirements
+
+A dataset should ideally contain:
+
+- One or more grouping variables (e.g., patient ID, organism, specimen
+  type)
+- A start date column (date_start)
+- For intervals: an end date column (date_end)
+- For events: a window (integer, days) and window_type (“static” or
+  “rolling”)
+
+You must also supply the grouping and date arguments via function
+parameters:
+
+- group_vars (character vector of column names)
+- date_start
+- Plus either date_end (for intervals) or window + window_type (for
+  events)
+- Optional: indx_varname, min_varname, max_varname to control output
+  column names
+
+### Purpose
+
+[`group_time()`](../reference/group_time.md) aggregates:
+
+- **Intervals** (start + end dates)  
+  e.g., hospital spells (HES/SUS)
+
+- **Events** (single date)  
+  e.g., microbiology specimen dates
+
+Two episode rules are supported:
+
+| Type               | Meaning                                                                                                     |
+|--------------------|-------------------------------------------------------------------------------------------------------------|
+| **Static window**  | Based on the first event only; all events within X days of the **first** event belong to the same episode.  |
+| **Rolling window** | The window resets with each event; a new event inside X days of the **previous** event extends the episode. |
+
+### Example usage
+
+``` r
+# Events example (14‑day static window):
+#1) Create example data
+
+episode_test <- structure(
+  list(
+    pat_id = c(1L, 1L, 1L, 1L, 2L, 2L, 2L, 1L, 1L, 1L, 1L, 2L, 2L, 2L),
+    species = c(rep("E. coli", 7), rep("K. pneumonia", 7)),
+    spec_type = c(rep("Blood", 7), rep("Blood", 4), rep("Sputum", 3)),
+    sp_date = structure(
+      c(
+        18262,
+        18263,
+        18281,
+        18282,
+        18262,
+        18263,
+        18281,
+        18265,
+        18270,
+        18281,
+        18283,
+        18259,
+        18260,
+        18281
+      ),
+      class = "Date"
+    )
+  ),
+  row.names = c(NA, -14L),
+  class = "data.frame"
+)
+
+# 2) Run group_time() for events using a 14-day static window
+ep_static <- group_time(
+  x = episode_test,
+  date_start = 'sp_date',
+  window = 14,
+  window_type = 'static',
+  group_vars = c('pat_id', 'species', 'spec_type'),
+  indx_varname = 'static_indx',   # optional
+  min_varname = 'min_date',
+  # optional (defaults)
+  max_varname = 'max_date'      # optional (defaults)
+)
+# 3) Show a preview
+print(head(ep_static), row.names = FALSE)
+#>  pat_id      species spec_type    sp_date static_indx   min_date   max_date
+#>   <int>       <char>    <char>     <Date>      <char>     <Date>     <Date>
+#>       1      E. coli     Blood 2020-01-01       1.4.1 2020-01-01 2020-01-02
+#>       1      E. coli     Blood 2020-01-02       1.4.1 2020-01-01 2020-01-02
+#>       1      E. coli     Blood 2020-01-20       1.4.2 2020-01-20 2020-01-21
+#>       1      E. coli     Blood 2020-01-21       1.4.2 2020-01-20 2020-01-21
+#>       1 K. pneumonia     Blood 2020-01-04       2.4.1 2020-01-04 2020-01-09
+#>       1 K. pneumonia     Blood 2020-01-09       2.4.1 2020-01-04 2020-01-09
+
+
+# Intervals example (start + end dates):1) Create example interval data (start + end dates)
+#1) Create example data
+spell_test <- data.frame(
+  id = c(rep(99, 6), rep(88, 4), rep(3, 3)),
+  provider = c("YXZ", rep("ZXY", 5), rep("XYZ", 4), rep("YZX", 3)),
+  spell_start = as.Date(
+    c(
+      "2020-03-01",
+      "2020-07-07",
+      "2020-02-08",
+      "2020-04-28",
+      "2020-03-15",
+      "2020-07-01",
+      "2020-01-01",
+      "2020-01-12",
+      "2019-12-25",
+      "2020-03-28",
+      "2020-01-01",
+      NA,
+      NA
+    )
+  ),
+  spell_end = as.Date(
+    c(
+      "2020-03-10",
+      "2020-07-26",
+      "2020-05-22",
+      "2020-04-30",
+      "2020-05-20",
+      "2020-07-08",
+      "2020-01-23",
+      "2020-03-30",
+      "2020-01-02",
+      "2020-04-20",
+      "2020-01-01",
+      NA,
+      NA
+    )
+  )
+)
+
+# 2) Run group_time() for intervals (start + end dates)
+spell_episodes <- group_time(
+  x = spell_test,
+  date_start = 'spell_start',
+  date_end = 'spell_end',
+  group_vars = c('id', 'provider'),
+  indx_varname = 'spell_id',
+  # optional
+  min_varname = 'spell_min_date',
+  # optional
+  max_varname = 'spell_max_date'        # optional
+)
+
+# 3) Show a preview
+print(head(spell_episodes), row.names = FALSE)
+#>     id provider spell_start  spell_end spell_id spell_min_date spell_max_date
+#>  <num>   <char>      <Date>     <Date>   <char>         <Date>         <Date>
+#>     88      XYZ  2019-12-25 2020-01-02    1.4.0     2019-12-25     2020-04-20
+#>     88      XYZ  2020-01-01 2020-01-23    1.4.0     2019-12-25     2020-04-20
+#>      3      YZX  2020-01-01 2020-01-01    2.1.0     2020-01-01     2020-01-01
+#>     88      XYZ  2020-01-12 2020-03-30    1.4.0     2019-12-25     2020-04-20
+#>     99      ZXY  2020-02-08 2020-05-22    3.5.0     2020-02-08     2020-05-22
+#>     99      YXZ  2020-03-01 2020-03-10    4.1.0     2020-03-01     2020-03-10
+```
+
+## Using **uk_patient_id()** and **group_time()** together with SGSS and CIMS data
+
+``` r
+# Example data generation
+
+# Helper to make plausible 10-digit NHS-like strings
+mk_nhs <- function(n) {
+  apply(matrix(sample(0:9, n * 10, replace = TRUE), nrow = n, byrow = TRUE),
+        1, paste0, collapse = "")
+}
+
+# A small "people" frame to borrow shared attributes from
+persons <- tibble::tibble(
+  id_person     = 1:6,
+  nhsnumber     = c(mk_nhs(5), NA_character_),   # include one missing NHS
+  forename      = c("John", "Jane", "Sam", "Aisha", "Maya", "John"),
+  surname       = c("Smith", "Doe", "Patel", "Khan", "Brown", "Smyth"),  # one spelling variant
+  date_of_birth = as.Date(c("1980-03-14","1991-11-02","1985-07-28","2002-01-09","2010-05-30","1980-03-14")),
+  sex           = c("M","F","M","F","U","M"),
+  postcode      = c("SW1A 1AA","E1 6AN","B1 1AA","M1 1AE","CF10 1EP","SW1A1AA") # one without space
+)
+
+# --- SGSS-like data: multiple specimens per person, some within 30 days ------
+sgss_data <- persons |> 
+  # duplicate person 1 (two specimens), and include others
+  slice(c(1, 1, 2, 3, 4, 5, 6)) |> 
+  mutate(
+    CDR_OPIE_ID            = row_number() + 1000L,
+    earliest_specimen_date = as.Date("2023-10-01") + c(0, 10, 5, 15, 40, 3, 2),
+    GROUP_A_STREP_PCR      = c("Detected","Not detected","Detected","Detected","Not detected","Detected","Detected"),
+    third                  = c("emm1","emm1","emm3","emm12","",NA,"emm89")
+  ) |> 
+  select(
+    CDR_OPIE_ID, nhsnumber, forename, surname, date_of_birth, sex,
+    postcode, earliest_specimen_date, GROUP_A_STREP_PCR, third
+  )
+
+# --- CIMS-like data: case notifications, some within 30 days of SGSS ----------
+cims_data <- persons |> 
+  # person 3 appears twice, person 1 appears once etc.
+  slice(c(1, 2, 3, 3, 4, 6)) %>%
+  mutate(
+    Case_identifier = row_number() + 2000L,
+    Date_entered    = as.Date("2023-10-05") + c(0,  6,  18,  50,  35,  1),
+    Infection       = c("iGAS","Scarlet fever","iGAS","iGAS","Scarlet fever","iGAS")
+  ) |> 
+  select(
+    Case_identifier, nhsnumber, forename, surname, date_of_birth,
+    sex, postcode, Date_entered, Infection
+  )
+
+# Example start:
+
+# Example of importing SGSS and CIMS data ready for linkage
+lnk.data_sgss <- sgss_data
+lnk.data_cims <- cims_data
+
+# Update SGSS column classes so they match with CIMS
+lnk.data_sgss <- lnk.data_sgss |>
+  mutate(
+    date_of_birth = as.Date(date_of_birth),
+    forename = as.character(forename),
+    surname = as.character(surname),
+    postcode = as.character(postcode),
+    patient_demog_sex = as.character(sex),
+    earliest_specimen_date = as.Date(earliest_specimen_date),
+    nhsnumber =  as.character(nhsnumber)
+  ) 
+
+# Update CIMS column classes so they match SGSS
+lnk.data_cims <- lnk.data_cims |>
+  mutate(
+    date_of_birth = as.Date(date_of_birth),
+    forename = as.character(forename),
+    surname = as.character(surname),
+    postcode = as.character(postcode),
+    sex = as.character(sex),
+    Date_entered = as.Date(Date_entered))
+
+# Convert data.frame to data.table so can be fed into function
+lnk.dt_cims <- data.table::setDT(lnk.data_cims)
+lnk.dt_sgss <- data.table::setDT(lnk.data_sgss)
+
+# Stack the two data sets
+lnk.dt_combined <-
+  bind_rows(
+    mutate(lnk.dt_cims, data_source = "dt_cims"),
+    mutate(lnk.dt_sgss, data_source = "dt_sgss")
+  )
+
+# Add common date field to be used during deduplication
+lnk.dt_combined <- lnk.dt_combined |>
+  mutate(common_date = (coalesce(earliest_specimen_date, Date_entered))) 
+
+# List of id fields to be used during normalisation of id fields
+# This is a parameter that is fed into the uk_patient_id() function
+id = list(
+  nhs_number = 'nhsnumber',
+  date_of_birth = 'date_of_birth',
+  sex_mfu = 'sex',
+  forename = 'forename',
+  surname = 'surname',
+  postcode = 'postcode'
+)
+
+# Feeding combined SGSS and CIMS data into uk_patient_id() function to get 
+# unique patient identifiers
+lnk.dt_combined_norm <- epidm::uk_patient_id(
+  lnk.dt_combined,
+  id,
+  .useStages = c(1:6),
+  .sortOrder = 'common_date',
+  .forceCopy = TRUE,
+  .keepValidNHS = FALSE, 
+  .keepStages = TRUE
+)
+#> Warning in .f(.x[[i]], ...): NHS number is missing or empty
+#> Warning in .f(.x[[i]], ...): NHS number is missing or empty
+
+# Group records by `id` into rolling 30-day windows based on `common_date`,
+# using `dedupe_key` as the unique row index; the trailing [] forces evaluation and returns a data.table
+lnk.dt_combined_grouped <- epidm::group_time(
+  x = lnk.dt_combined_norm,
+  date_start = 'common_date',
+  window = 30,
+  window_type = 'rolling',
+  indx_varname = 'dedup_key',
+  group_vars = c(
+    "id"
+  )
+)[]
+
+# Filter to pull out just CIMS data
+lnk.grouped_cims <- lnk.dt_combined_grouped |>
+  filter(data_source == "dt_cims") |>
+  select (
+    id,
+    Case_identifier,
+    date_of_birth,
+    forename,
+    surname,
+    nhsnumber,
+    postcode,
+    Infection,
+    sex,
+    common_date,
+    data_source,
+    dedup_key
+  )
+
+# Filter to pull out just SGSS data
+lnk.grouped_sgss <- lnk.dt_combined_grouped |>
+  filter(data_source == "dt_sgss") |>
+  select (
+    CDR_OPIE_ID,
+    id,
+    date_of_birth,
+    forename,
+    surname,
+    nhsnumber,
+    postcode,
+    GROUP_A_STREP_PCR,
+    common_date,
+    data_source,
+    dedup_key,
+    third
+  )
+
+# Taking one row from each split - gives one episode per dataset
+lnk.grouped_cims_deduped <- lnk.grouped_cims |> 
+  group_by(dedup_key) |> 
+  slice(1) |> 
+  ungroup() 
+
+# De-duplicating SGSS- prioritising earliest emm typing with a relevant result
+lnk.grouped_sgss_deduped <- lnk.grouped_sgss |> 
+  group_by(dedup_key) |> 
+  arrange(dedup_key, common_date) |>   
+  slice(1) |>  
+  ungroup() 
+
+# Join splits by dedup key- common field names with .x refer to CIMS and .y for SGSS
+lnk.split_join_cims_sgss <-
+  full_join(lnk.grouped_cims_deduped, lnk.grouped_sgss_deduped, by = "dedup_key")
+```

@@ -26,11 +26,11 @@ Functions for handling, cleaning and processing public health data
 - [`uk_patient_id()`](uk_patient_id.md) **\[stable\]** : Patient ID
   record grouping
 - [`proxy_episode_dates()`](proxy_episode_dates.md) **\[stable\]** :
-  HES/SUS Episode Date Cleaning
+  Clean and Impute HES/SUS Episode Start and End Dates
 - [`cip_spells()`](cip_spells.md) **\[stable\]** : Continuous Inpatient
   (CIP) Spells
 - [`group_time()`](group_time.md) **\[stable\]** : Grouping of intervals
-  or events in time together
+  or events that occur close together in time
 - [`respeciate_generic()`](respeciate_generic.md) **\[stable\]** :
   Respeciate unspecified samples
 - [`inpatient_codes()`](inpatient_codes.md) **\[experimental\]** :
@@ -52,8 +52,8 @@ Lookup tables used to reclassify, regroup, or translate data
   : Inpatient admission methods
 - [`group_inpatient_discharge_destination`](group_inpatient_discharge_destination.md)
   : Inpatient discharge destination
-- [`hospital_in_out_dates()`](hospital_in_out_dates.md) : Hospital
-  IN/OUT dates
+- [`hospital_in_out_dates()`](hospital_in_out_dates.md)
+  **\[experimental\]** : Hospital IN/OUT dates
 
 ## Data
 

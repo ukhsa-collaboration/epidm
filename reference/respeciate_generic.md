@@ -51,8 +51,10 @@ respeciate_generic(
 
 - .forceCopy:
 
-  default FALSE; TRUE will force data.table to take a copy instead of
-  editing the data without reference
+  Logical (default `FALSE`). If `FALSE`, the input is converted to a
+  `data.table` and modified by reference. If `TRUE`, the input must
+  already be a `data.table`, and the function will create an explicit
+  copy to avoid modifying the original object.
 
 ## Value
 
@@ -83,30 +85,31 @@ respeciate_generic(x=df,
 #> 14-day round 4: 1 SP or UNNAMMED isolates respeciated
 #>      ptid                  spec   type   specdate
 #>     <num>                <char> <char>     <Date>
-#>  1:     1         KLEBSIELLA SP  BLOOD 2025-11-18
-#>  2:     1         KLEBSIELLA SP  BLOOD 2025-12-05
-#>  3:     1 KLEBSIELLA PNEUMONIAE  BLOOD 2025-12-06
-#>  4:     2         KLEBSIELLA SP  BLOOD 2025-11-20
-#>  5:     2         KLEBSIELLA SP  BLOOD 2025-11-23
-#>  6:     2         KLEBSIELLA SP  BLOOD 2025-11-26
-#>  7:     2         KLEBSIELLA SP  BLOOD 2025-11-28
-#>  8:     2         KLEBSIELLA SP  BLOOD 2025-12-05
-#>  9:     3    KLEBEIELLA OXYTOCA  BLOOD 2025-11-26
-#> 10:     3    KLEBEIELLA OXYTOCA  BLOOD 2025-12-06
-#> 11:     3    KLEBEIELLA OXYTOCA  BLOOD 2025-12-08
-#> 12:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-21
-#> 13:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-21
-#> 14:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-24
-#> 15:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-25
-#> 16:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-30
-#> 17:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-12-04
-#> 18:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-12-06
-#> 19:     4    KLEBEIELLA OXYTOCA  BLOOD 2025-11-19
-#> 20:     4         KLEBSIELLA SP  BLOOD 2025-11-19
-#> 21:     4         KLEBSIELLA SP  BLOOD 2025-11-26
-#> 22:     4         KLEBSIELLA SP  BLOOD 2025-11-29
-#> 23:     4         KLEBSIELLA SP  BLOOD 2025-11-30
-#> 24:     5 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-30
-#> 25:     5 KLEBSIELLA PNEUMONIAE  BLOOD 2025-12-07
+#>  1:     1         KLEBSIELLA SP  BLOOD 2026-01-29
+#>  2:     1         KLEBSIELLA SP  BLOOD 2026-02-15
+#>  3:     1 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-16
+#>  4:     2         KLEBSIELLA SP  BLOOD 2026-01-31
+#>  5:     2         KLEBSIELLA SP  BLOOD 2026-02-03
+#>  6:     2         KLEBSIELLA SP  BLOOD 2026-02-06
+#>  7:     2         KLEBSIELLA SP  BLOOD 2026-02-08
+#>  8:     2         KLEBSIELLA SP  BLOOD 2026-02-15
+#>  9:     3    KLEBEIELLA OXYTOCA  BLOOD 2026-02-06
+#> 10:     3    KLEBEIELLA OXYTOCA  BLOOD 2026-02-16
+#> 11:     3    KLEBEIELLA OXYTOCA  BLOOD 2026-02-18
+#> 12:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-01
+#> 13:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-01
+#> 14:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-04
+#> 15:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-05
+#> 16:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-10
+#> 17:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-14
+#> 18:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-16
+#> 19:     4    KLEBEIELLA OXYTOCA  BLOOD 2026-01-30
+#> 20:     4         KLEBSIELLA SP  BLOOD 2026-01-30
+#> 21:     4         KLEBSIELLA SP  BLOOD 2026-02-06
+#> 22:     4         KLEBSIELLA SP  BLOOD 2026-02-09
+#> 23:     4         KLEBSIELLA SP  BLOOD 2026-02-10
+#> 24:     5 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-10
+#> 25:     5 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-17
 #>      ptid                  spec   type   specdate
+#>     <num>                <char> <char>     <Date>
 ```

@@ -13,7 +13,7 @@ from the same site within a recent time period.  This function captures
 species_col  from another sample within X-days of an unspeciated isolate.
 Respeciation is restricted to organisms of the same genus; species will not
 be inferred from isolates belonging to a different genus. Trailing "UNNAMED"
-is normalised to "SP" before any processing.'><meta name="twitter:card" content="summary"><meta name="twitter:creator" content="@alexbhatt"><meta name="twitter:site" content="@alexbhatt"></head><body>
+is normalised to "SP" before any processing.'><meta property="og:image" content="/logo.png"><meta name="twitter:card" content="summary"><meta name="twitter:creator" content="@alexbhatt"><meta name="twitter:site" content="@alexbhatt"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -21,7 +21,7 @@ is normalised to "SP" before any processing.'><meta name="twitter:card" content=
 
     <a class="navbar-brand me-2" href="../index.html">epidm</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -30,10 +30,14 @@ is normalised to "SP" before any processing.'><meta name="twitter:card" content=
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/epidm-function-usage.html">Guide: Staged Patient Matching and Time-based Episode Grouping with EpiDM</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/alexbhatt/epidm/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/ukhsa-collaboration/epidm/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-lightswitch" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true" aria-label="Light switch"><span class="fa fa-sun"></span></button>
   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdown-lightswitch"><li><button class="dropdown-item" data-bs-theme-value="light"><span class="fa fa-sun"></span> Light</button></li>
@@ -47,9 +51,8 @@ is normalised to "SP" before any processing.'><meta name="twitter:card" content=
 </nav><div class="container template-reference-topic">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-
-      <h1>Respeciate unspecified samples</h1>
-      <small class="dont-index">Source: <a href="https://github.com/alexbhatt/epidm/blob/dev/R/respeciate_generic.R" class="external-link"><code>R/respeciate_generic.R</code></a></small>
+      <img src="../logo.png" class="logo" alt=""><h1>Respeciate unspecified samples</h1>
+      <small class="dont-index">Source: <a href="https://github.com/ukhsa-collaboration/epidm/blob/master/R/respeciate_generic.R" class="external-link"><code>R/respeciate_generic.R</code></a></small>
       <div class="d-none name"><code>respeciate_generic.Rd</code></div>
     </div>
 
@@ -105,8 +108,11 @@ allow a sample to be respeciated</p></dd>
 
 
 <dt id="arg--forcecopy">.forceCopy<a class="anchor" aria-label="anchor" href="#arg--forcecopy"></a></dt>
-<dd><p>default FALSE; TRUE will force data.table to take a copy
-instead of editing the data without reference</p></dd>
+<dd><p>Logical (default <code>FALSE</code>).
+If <code>FALSE</code>, the input is converted to a <code>data.table</code> and modified by
+reference.
+If <code>TRUE</code>, the input must already be a <code>data.table</code>, and the function will
+create an explicit copy to avoid modifying the original object.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -139,32 +145,33 @@ instead of editing the data without reference</p></dd>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 14-day round 4: 1 SP or UNNAMMED isolates respeciated</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      ptid                  spec   type   specdate</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     &lt;num&gt;                &lt;char&gt; &lt;char&gt;     &lt;Date&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  1:     1         KLEBSIELLA SP  BLOOD 2025-11-18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  2:     1         KLEBSIELLA SP  BLOOD 2025-12-05</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  3:     1 KLEBSIELLA PNEUMONIAE  BLOOD 2025-12-06</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  4:     2         KLEBSIELLA SP  BLOOD 2025-11-20</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  5:     2         KLEBSIELLA SP  BLOOD 2025-11-23</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  6:     2         KLEBSIELLA SP  BLOOD 2025-11-26</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  7:     2         KLEBSIELLA SP  BLOOD 2025-11-28</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  8:     2         KLEBSIELLA SP  BLOOD 2025-12-05</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  9:     3    KLEBEIELLA OXYTOCA  BLOOD 2025-11-26</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10:     3    KLEBEIELLA OXYTOCA  BLOOD 2025-12-06</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11:     3    KLEBEIELLA OXYTOCA  BLOOD 2025-12-08</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-21</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 13:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-21</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 14:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-24</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 15:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 16:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-30</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 17:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-12-04</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 18:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2025-12-06</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 19:     4    KLEBEIELLA OXYTOCA  BLOOD 2025-11-19</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 20:     4         KLEBSIELLA SP  BLOOD 2025-11-19</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 21:     4         KLEBSIELLA SP  BLOOD 2025-11-26</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 22:     4         KLEBSIELLA SP  BLOOD 2025-11-29</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 23:     4         KLEBSIELLA SP  BLOOD 2025-11-30</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 24:     5 KLEBSIELLA PNEUMONIAE  BLOOD 2025-11-30</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 25:     5 KLEBSIELLA PNEUMONIAE  BLOOD 2025-12-07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  1:     1         KLEBSIELLA SP  BLOOD 2026-01-29</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2:     1         KLEBSIELLA SP  BLOOD 2026-02-15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  3:     1 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  4:     2         KLEBSIELLA SP  BLOOD 2026-01-31</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  5:     2         KLEBSIELLA SP  BLOOD 2026-02-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  6:     2         KLEBSIELLA SP  BLOOD 2026-02-06</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  7:     2         KLEBSIELLA SP  BLOOD 2026-02-08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  8:     2         KLEBSIELLA SP  BLOOD 2026-02-15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  9:     3    KLEBEIELLA OXYTOCA  BLOOD 2026-02-06</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10:     3    KLEBEIELLA OXYTOCA  BLOOD 2026-02-16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11:     3    KLEBEIELLA OXYTOCA  BLOOD 2026-02-18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-01</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-01</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-14</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18:     3 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19:     4    KLEBEIELLA OXYTOCA  BLOOD 2026-01-30</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20:     4         KLEBSIELLA SP  BLOOD 2026-01-30</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21:     4         KLEBSIELLA SP  BLOOD 2026-02-06</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22:     4         KLEBSIELLA SP  BLOOD 2026-02-09</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23:     4         KLEBSIELLA SP  BLOOD 2026-02-10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24:     5 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25:     5 KLEBSIELLA PNEUMONIAE  BLOOD 2026-02-17</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      ptid                  spec   type   specdate</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     &lt;num&gt;                &lt;char&gt; &lt;char&gt;     &lt;Date&gt;</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
@@ -173,7 +180,7 @@ instead of editing the data without reference</p></dd>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Alex Bhattacharya, Alice Graham, Harshana Liyanage.</p>
+  <p>Developed by Alex Bhattacharya, Alice Graham, Harshana Liyanage, Frederick Sloots, Emma Parker.</p>
 </div>
 
 <div class="pkgdown-footer-right">

@@ -2,14 +2,18 @@
 
 **\[stable\]**
 
-A continuous inpatient (CIP) spell is a continuous period of care within
-the NHS, which does allow specific types of transfers to take place. It
-can therefore be made up of one or more provider spells. A CIP spell
-starts when a decision has been made to admit the patient, and a
-consultant has taken responsibility for their care. The spell ends when
-the patient dies or is discharged from hospital. This follows the NHS
-Digital Provider Spells Methodology:
+Creates **Continuous Inpatient (CIP) spells** by combining one or more
+provider spells into a single uninterrupted period of inpatient care.
+CIP definitions follow the NHS Digital methodology: transfers between
+providers can be part of the same CIP spell where specific admission,
+discharge, and timing criteria are met. A CIP spell begins when a
+patient is admitted under consultant care and ends when they are
+discharged or die.
 http://content.digital.nhs.uk/media/11859/Provider-Spells-Methodology/pdf/Spells_Methodology.pdf
+
+Where spells meet the CIP criteria, they are merged into a continuous
+spell. The output includes a CIP index and the derived start and end
+dates for the full CIP period.
 
 ## Usage
 
@@ -31,57 +35,60 @@ cip_spells(
 
 - x:
 
-  a data frame; will be converted to a data.table
+  A data.frame or data.table; will be converted to a data.table (usually
+  HES/SUS data)
 
 - group_vars:
 
-  a vector containing any variables to be used for record grouping,
-  minimum is a patient identifier
+  Character vector of variables used to group records (minimum: a
+  patient identifier).
 
 - spell_start_date:
 
-  Inpatient provider spell or episode admission date
+  Quoted column name containing the provider spell admission date.
 
 - admission_method:
 
-  CDS admission method code
+  CDS admission method code.
 
 - admission_source:
 
-  CDS admission source code
+  CDS admission source code.
 
 - spell_end_date:
 
-  Inpatient provider spell or episode discharge date
+  Quoted column name containing the provider spell discharge date.
 
 - discharge_destination:
 
-  CDS discharge destination code
+  CDS discharge destination code.
 
 - patient_classification:
 
-  CDS patient classification code
+  CDS patient classification code.
 
 - .forceCopy:
 
-  default FALSE; TRUE will force data.table to take a copy instead of
-  editing the data without reference
+  Logical (default `FALSE`). If `FALSE`, the input is converted to a
+  `data.table` and modified by reference. If `TRUE`, the input must
+  already be a `data.table`, and the function will create an explicit
+  copy to avoid modifying the original object.
 
 ## Value
 
-the original data.frame as a data.table with the following new fields:
+A `data.table` containing the original data and three new variables:
 
 - `cip_indx`:
 
-  an id field for the CIP spell
+  Unique identifier for the derived CIP spell.
 
 - `cip_spell_start`:
 
-  the start date for the CIP spell
+  Start date for the continuous inpatient spell.
 
 - `cip_spell_end`:
 
-  the end date for the CIP spell
+  End date for the continuous inpatient spell.
 
 ## Examples
 
@@ -220,6 +227,7 @@ cip_spells(x=cip_test,
 #> 54:   8418      KHA  2020-08-19 2020-08-22       21      19        1       19
 #> 55:   8418      KHA  2020-11-19 2020-12-16       21      51        4       79
 #>         id provider spell_start  spell_end adm_meth adm_src dis_meth dis_dest
+#>     <char>   <char>      <Date>     <Date>   <char>  <char>   <char>   <char>
 #>     patclass proxy_missing cip_indx cip_spell_start cip_spell_end
 #>       <char>         <num>   <char>          <Date>        <Date>
 #>  1:        1             0    1.3.0      2019-11-12    2020-05-20
@@ -278,4 +286,5 @@ cip_spells(x=cip_test,
 #> 54:        1             0    7.8.5      2020-08-19    2020-08-22
 #> 55:        1             0    7.8.7      2020-11-19    2020-12-16
 #>     patclass proxy_missing cip_indx cip_spell_start cip_spell_end
+#>       <char>         <num>   <char>          <Date>        <Date>
 ```

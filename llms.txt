@@ -1,19 +1,18 @@
-# Epidemiological Data Management (epidm)
+# epidm
 
-The goal of `epidm` is provide standard methods for the management and
-transformation of UK Public Health data.
-
-[The full function guide can be found
-here](https://alexbhatt.github.io/epidm/)
+`epidm` provides standard methods for the management and transformation
+of UK Public Health data in R
 
 ## Installation
 
-Available via CRAN or you can download the development version via
-[GitHub](https://github.com/alexbhatt/epidm)
+epiviz can be installed from GitHub using the following code:
 
 ``` r
-install.packages("epidm")
-devtools::install_github("alexbhatt/epidm")
+# Install epidm
+remotes::install_github('ukhsa-collaboration/epidm')
+
+# To install the development version
+remotes::install_github("ukhsa-collaboration/epidm@dev")
 ```
 
 ## Purpose
@@ -89,11 +88,11 @@ Functions for handling, cleaning and processing public health data
 - [`uk_patient_id()`](uk_patient_id.md) **\[stable\]** : Patient ID
   record grouping
 - [`proxy_episode_dates()`](proxy_episode_dates.md) **\[stable\]** :
-  HES/SUS Episode Date Cleaning
+  Clean and Impute HES/SUS Episode Start and End Dates
 - [`cip_spells()`](cip_spells.md) **\[stable\]** : Continuous Inpatient
   (CIP) Spells
 - [`group_time()`](group_time.md) **\[stable\]** : Grouping of intervals
-  or events in time together
+  or events that occur close together in time
 - [`respeciate_generic()`](respeciate_generic.md) **\[stable\]** :
   Respeciate unspecified samples
 - [`inpatient_codes()`](inpatient_codes.md) **\[experimental\]** :
@@ -115,8 +114,8 @@ Lookup tables used to reclassify, regroup, or translate data
   : Inpatient admission methods
 - [`group_inpatient_discharge_destination`](group_inpatient_discharge_destination.md)
   : Inpatient discharge destination
-- [`hospital_in_out_dates()`](hospital_in_out_dates.md) : Hospital
-  IN/OUT dates
+- [`hospital_in_out_dates()`](hospital_in_out_dates.md)
+  **\[experimental\]** : Hospital IN/OUT dates
 
 ## Data
 
@@ -124,3 +123,9 @@ Synthetic dataset for testing package functionality
 
 - [`lab_data`](lab_data.md) : Synthetic Lab Data for epidm
 
+# Articles
+
+### All vignettes
+
+- [Guide: Staged Patient Matching and Time-based Episode Grouping with
+  EpiDM](epidm-function-usage.md):

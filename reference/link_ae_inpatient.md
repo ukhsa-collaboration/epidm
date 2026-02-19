@@ -1,11 +1,13 @@
-# Link A&E to Inpatient records
+# Link A&E (ECDS) records to Inpatient (HES/SUS) spells
 
 **\[experimental\]**
 
-Link together ECDS A&E records to HES/SUS inpatient records on NHS
-number, Hospital Number and Date of Birth and organisation code. To note
-that the inpatient records should already be aggregated into spells at
-the desired level (standard, CIP or Mega)
+Links Emergency Care Data Set (ECDS) **A&E records** to **inpatient
+spells** (HES/SUS) using patient identifiers (NHS number, hospital
+number, date of birth), organisation code, and a **link date**. The
+inpatient records should already be aggregated to the desired spell
+level (e.g., provider spell, CIP, or “mega” spell). The output is a
+patient-level linked table suitable for downstream pathway analysis.
 
 ## Usage
 
@@ -27,92 +29,112 @@ link_ae_inpatient(
 
 - ae:
 
-  a list to provide data and columns for the A&E (ECDS) data; all
-  arguments provided quoted unless specified
+  A named **list** describing the A&E (ECDS) input with quoted column
+  names:
 
   `data`
 
-  :   the ECDS A&E dataset provided unquoted
+  :   ECDS A&E dataset (unquoted object).
 
   `record_id`
 
-  :   Optional. A unique identifier within the dataset. Can be included
-      in either `ae`, `inp`, or both. If present in both, each will be
-      retained as separate columns in the output (`_ae` and `_inp`)
+  :   Optional unique row id to retain.
 
   `arrival_date`
 
-  :   the ECDS arrival date
+  :   A&E arrival date column.
 
   `departure_date`
 
-  :   the ECDS discharge date
+  :   A&E departure date column.
 
   `nhs_number`
 
-  :   the patient NHS number
+  :   NHS number column.
 
   `hospital_number`
 
-  :   the patient Hospital numbers also known as the local patient
-      identifier
+  :   Local patient identifier column.
 
   `patient_dob`
 
-  :   patient date of birth
+  :   Date of birth column.
 
   `org_code`
 
-  :   the NHS trust organisation codes
+  :   Provider organisation code column.
 
 - inp:
 
-  a list to provide data and columns for the inpatient (SUS/HES) data
+  A named **list** describing the inpatient (HES/SUS) input with quoted
+  column names:
 
   `data`
 
-  :   the HES/SUS inpatient dataset provided unquoted
+  :   Inpatient dataset (unquoted object).
 
   `record_id`
 
-  :   Optional. A unique identifier within the dataset. Can be included
-      in either `ae`, `inp`, or both. If present in both, each will be
-      retained as separate columns in the output (`_ae` and `_inp`)
+  :   Optional unique row id to retain.
 
   `spell_start_date`
 
-  :   a string containing the inpatient (SUS/HES) admission date column
-      name; all arguments provided quoted unless specified
+  :   Inpatient spell start/admission date column.
 
   `spell_id`
 
-  :   the HES/SUS spell id
+  :   Spell identifier to carry through (e.g., CIP or mega spell id).
 
   `nhs_number`
 
-  :   the patient NHS number
+  :   NHS number column.
 
   `hospital_number`
 
-  :   the patient Hospital numbers also known as the local patient
-      identifier
+  :   Local patient identifier column.
 
   `patient_dob`
 
-  :   patient date of birth
+  :   Date of birth column.
 
   `org_code`
 
-  :   the NHS trust organisation codes
+  :   Provider organisation code column.
 
 - .forceCopy:
 
-  a boolean to control if you want to copy the dataset before linking
-  together
+  Logical (default `FALSE`). If `FALSE`, the input is converted to a
+  `data.table` and modified by reference. If `TRUE`, the input must
+  already be a `data.table`, and the function will create an explicit
+  copy to avoid modifying the original object.
 
 ## Value
 
-a patient level linked hospital record
+A **linked `data.table`** at **patient/spell level** containing:
+
+- Harmonised identifiers (NHS number / hospital number, DOB, org code)
+
+- A&E arrival/departure dates
+
+- Inpatient spell identifiers and spell start date
+
+- (If supplied) preserved `record_id` columns (tagged `*_ae` / `*_inp`)
+
+## Workflow context
+
+Use `link_ae_inpatient()` **after**:
+
+- ECDS A&E data are cleaned/standardised (e.g., discharge categories via
+  [`lookup_recode()`](lookup_recode.md)).
+
+- Inpatient records have been **aggregated to spells** (e.g.,
+  [`cip_spells()`](cip_spells.md) for continuous inpatient spells).
+
+Use it **before**:
+
+- Rejoining to SGSS infection episodes (e.g., outputs of
+  [`group_time()`](group_time.md)), or deriving `hospital_in_out_dates`
+  for entry/exit timelines.
 
 ## See also
 

@@ -34,5 +34,4 @@ testSQL <- c(
 "FROM DATASET ","-- output here")
 sql_clean(testSQL)
 #> [1] "SELECT [VAR 1] ,[VAR 2] ,[VAR 3] FROM DATASET"
-
 ```

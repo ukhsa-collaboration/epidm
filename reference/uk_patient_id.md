@@ -2,32 +2,56 @@
 
 **\[stable\]**
 
-Groups patient records from multiple isolates with a single integer
-patientID by grouping patient identifiers.
+Assigns a **single integer `id`** to records that belong to the same
+patient by applying a sequence of **deterministic matching stages**
+across common identifiers (NHS number, hospital number, DOB, name, sex,
+postcode). Identifiers are standardised, validated using NHS checksum
+function, and fuzzy name keys are used in later stages. ' Matching is
+performed in order through the following stages (first match is
+applied):
 
-Grouping is based on the following stages:
+1.  NHS number + date of birth
 
-1.  matching nhs number and date of birth
+2.  Hospital number + date of birth
 
-2.  Hospital number & Date of Birth
+3.  NHS number + hospital number
 
-3.  NHS number & Hospital Number
+4.  NHS number + surname
 
-4.  NHS number & Name
+5.  Hospital number + surname
 
-5.  Hospital number & Name
+6.  Date of birth + surname (only where NHS is invalid/absent)
 
-6.  Date of Birth & Surname
+7.  Sex + full name (forename + surname)
 
-7.  Sex & Full name
+8.  Sex + date of birth + fuzzy name (Soundex; surname + initial)
 
-8.  Sex & Year and Month of Birth & Fuzzy Name
+9.  Date of birth (YYYY-MM) + fuzzy name
 
-9.  Year and Month of Birth & Fuzzy Name
+10. Surname/forename + postcode
 
-10. Postcode & Name
+11. Name swaps (forename/surname reversed) + date of birth
 
-11. Name Swaps (when first and last name are the wrong way around)
+Use `.useStages` to restrict which stages are applied (default: `1:11`).
+The function generates a reproducible `id` per patient within the sort
+order; you can provide `.sortOrder` (e.g., a date column) to make
+assignment deterministic.
+
+**Validity rules applied:**
+
+- **NHS number** validated using the standard checksum
+  ([`epidm::valid_nhs()`](valid_nhs.md)).
+
+- **Hospital number**: excludes known placeholders (e.g., `"UNKNOWN"`,
+  `"NO PATIENT ID"`).
+
+- **DOB**: excludes proxy or missing dates (`"1900-01-01"`,
+  `"1800-01-01"`, `NA`).
+
+- **Sex**: normalised to `"M"` / `"F"`; others → `NA`.
+
+- **Names**: uppercased, Latin characters normalised; Soundex used for
+  fuzzy matching.
 
 Identifiers are copied over where they are missing or invalid to the
 grouped records.
@@ -36,7 +60,7 @@ grouped records.
 
 ``` r
 uk_patient_id(
-  data,
+  x,
   id = list(nhs_number = "nhs_number", hospital_number = "patient_hospital_number",
     date_of_birth = "date_of_birth", sex_mfu = "sex", forename = "forename", surname =
     "surname", postcode = "postcode"),
@@ -50,42 +74,41 @@ uk_patient_id(
 
 ## Arguments
 
-- data:
+- x:
 
-  a data.frame or data.table containing the patient data
+  A `data.frame` or `data.table` with patient identifiers.
 
 - id:
 
-  a named list to provide the column names with identifiers, quoted
+  A **named list** of quoted column names:
 
   `nhs_number`
 
-  :   the patient NHS number
+  :   NHS number.
 
   `hospital_number`
 
-  :   the patient Hospital numbers also known as the local patient
-      identifier
+  :   Local patient identifier (hospital number).
 
   `date_of_birth`
 
-  :   the patient date of birth
+  :   Date of birth.
 
   `sex_mfu`
 
-  :   the patient sex or gender field as Male/Female/Unknown
+  :   Sex/gender (M/F/Unknown).
 
   `forename`
 
-  :   the patient forename
+  :   Forename / first name.
 
   `surname`
 
-  :   the patient surname
+  :   Surname / last name.
 
   `postcode`
 
-  :   the patient postcode
+  :   Patient postcode.
 
 - .useStages:
 
@@ -128,16 +151,23 @@ uk_patient_id(
 
 ## Value
 
-A dataframe with one new variable:
+A `data.table` with the original columns plus:
 
 - `id`:
 
-  a unique patient id
+  Integer patient identifier assigned by staged matching.
 
 - `valid_nhs`:
 
-  if retained using argument `.keepValidNHS=TRUE`, a BOOLEAN containing
-  the result of the NHS checksum validation
+  (Optional) BOOLEAN NHS checksum flag; included when
+  `.keepValidNHS = TRUE`.
+
+## Workflow context
+
+`uk_patient_id()` is typically used early to harmonise patient identity
+across isolates before downstream tasks such as specimen episode
+grouping ([`group_time()`](group_time.md)), dataset linkage (e.g., to
+HES/SUS/ECDS), and epidemiological reporting.
 
 ## Examples
 
@@ -196,9 +226,10 @@ id_test <-
                       "2022-01-27","2022-01-28")
   )
 
+data.table::setDT(id_test)
 
 uk_patient_id(
-  data = id_test,
+  x = id_test,
   id = list(
     nhs_number = 'nhs_number',
     hospital_number = 'local_patient_identifier',
@@ -248,6 +279,7 @@ uk_patient_id(
 #> 23:    18                s3        14 9435802508                   UK8734
 #> 24:    18               s11        15       <NA>                     <NA>
 #>        id        stageMatch record_id nhs_number local_patient_identifier
+#>     <int>            <char>     <int>     <char>                   <char>
 #>     patient_birth_date    sex forename surname postcode specimen_date
 #>                 <char> <char>   <char>  <char>   <char>        <char>
 #>  1:         1967-02-10      F    ELLIE SATTLER    L31DZ    2021-03-28
@@ -275,5 +307,6 @@ uk_patient_id(
 #> 23:               <NA>      M      IAN    <NA>     <NA>    2024-07-06
 #> 24:         1952-10-22      M  MALCOLM     IAN  BN149EP    2024-07-06
 #>     patient_birth_date    sex forename surname postcode specimen_date
+#>                 <char> <char>   <char>  <char>   <char>        <char>
 
 ```

@@ -1,8 +1,12 @@
-# HES/SUS Episode Date Cleaning
+# Clean and Impute HES/SUS Episode Start and End Dates
 
 **\[stable\]**
 
-Correcting for missing end dates on HES/SUS episodes
+A utility for cleaning and imputing missing or inconsistent episode end
+dates in HES/SUS–style inpatient data. The function identifies missing,
+invalid, or overlapping spell dates within patient/provider groups and
+applies deterministic rules to correct them. It also assigns a flag
+(`proxy_missing`) indicating whether a value was modified and why.
 
 ## Usage
 
@@ -22,38 +26,46 @@ proxy_episode_dates(
 
 - x:
 
-  a data frame; will be converted to a data.table
+  A `data.frame` or `data.table`. Will be converted to a `data.table` if
+  not already.
 
 - group_vars:
 
-  a vector containing any variables to be used for record grouping,
-  minimum is a patient identifier
+  Character vector of grouping variables (e.g., patient ID, provider).
+  At least one identifier must be supplied.
 
 - spell_start_date:
 
-  Inpatient provider spell or episode admission date
+  Name of the column containing the episode or spell start date.
 
 - spell_end_date:
 
-  Inpatient provider spell or episode discharge date
+  Name of the column containing the episode or spell end date.
 
 - discharge_destination:
 
-  CDS discharge destination code
+  Name of the column containing the CDS discharge destination code.
 
 - .dropTmp:
 
-  default TRUE; a logical to drop all tmp values used
+  Logical (default `TRUE`). If `TRUE`, temporary processing columns are
+  removed before returning the result.
 
 - .forceCopy:
 
-  default FALSE; TRUE will force data.table to take a copy instead of
-  editing the data without reference
+  Logical (default `FALSE`). If `FALSE`, the input is converted to a
+  `data.table` and modified by reference. If `TRUE`, the input must
+  already be a `data.table`, and the function will create an explicit
+  copy to avoid modifying the original object.
 
 ## Value
 
-a data.table with cleaned start and end dates, and an indicator
-proxy_missing where the value has changed
+A `data.table` containing:
+
+- Cleaned spell start and end dates.
+
+- A flag variable (`proxy_missing`) indicating whether a date was
+  modified and the rule applied (0–4).
 
 ## Examples
 
@@ -103,7 +115,7 @@ proxy_episode_dates(
 #>     <num>   <char>      <Date>     <Date>   <num>         <num>
 #>  1:  1236      LJG  2020-10-06 2020-10-06      19             0
 #>  2:  1236      LJG  2020-11-05 2020-11-05      19             0
-#>  3:  1236      LJG  2020-12-25 2025-12-09      98             1
+#>  3:  1236      LJG  2020-12-25 2026-02-19      98             1
 #>  4:  3051      QKJ  2020-07-03 2020-07-11      19             0
 #>  5:  3051      QKJ  2020-07-14 2020-07-22      19             0
 #>  6:  3051      QKJ  2020-07-23 2020-07-30      51             0
