@@ -42,6 +42,29 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.6" id="epidm-106">epidm 1.0.6<a class="anchor" aria-label="anchor" href="#epidm-106"></a></h2>
+<ul><li><p>This package is now being maintained by the EpiDS team in UKHSA and therefore has moved to the organisation repo and has changes in maintainers.</p></li>
+<li><p>Expanded error handling across multiple core functions.</p></li>
+<li><p>Improved function parameter validation.</p></li>
+<li><p>Various improvements to functions.</p></li>
+<li><p>Added tmp.genus to grouping and normalisation of UNNAMED to SP in respeciate_generic function.</p></li>
+<li><p>Fixes to link_ae_inpatient function.</p></li>
+<li><p>Improved date handling and window logic in group_time function.</p></li>
+<li><p>lookup_recode is now exported and fully validated with tests ensuring lookup availability and correct structure.</p></li>
+<li><p>Added case‑insensitive file matching along with enhanced error handling and tests in csv_from_zip.</p></li>
+<li><p>sql_readwrite / sql_connect: Re factored to support mocking with strengthened connection validation and full simulated‑DB tests.</p></li>
+<li><p>Comprehensive tests suites added for all functions.</p></li>
+<li><p>Major rewrite and expansion of function documentation across package.</p></li>
+<li><p>Added workflow details and vignette.</p></li>
+<li><p>Added warning for incomplete function (hospital_in_out_dates)</p></li>
+<li><p>Consistency fixes, including parameter names and descriptions.</p></li>
+<li><p>Updated README including logo.</p></li>
+<li><p>Updated DESCRIPTION metadata, additional authors, updated URLs and BugReports.</p></li>
+<li><p>R version updates and package version updates.</p></li>
+<li><p>Added and refined GitHub Actions.</p></li>
+<li><p>Updated pkgdown configuration.</p></li>
+</ul></div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.5" id="epidm-105">epidm 1.0.5<a class="anchor" aria-label="anchor" href="#epidm-105"></a></h2>
 <ul><li><p>Added ECDS destination_code lookups and use in lookup_recode to show where patients go after A&amp;E attendance.</p></li>
 <li><p>Added new lookups for inpatient admission_method and discharge_destination; can be called using epidm::lookup_recode.</p></li>
