@@ -107,7 +107,8 @@ utils::globalVariables(
     'tmp.id',
     'tmp.idMode',
     'tmp.sN',
-    'tmp.valid.n.swap'
+    'tmp.valid.n.swap',
+    '..grp'
   )
 )
 
