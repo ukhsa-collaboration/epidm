@@ -2,7 +2,7 @@
 % Please edit documentation in R/proxy_episode_dates.R
 \name{proxy_episode_dates}
 \alias{proxy_episode_dates}
-\title{HES/SUS Episode Date Cleaning}
+\title{Clean and Impute HES/SUS Episode Start and End Dates}
 \usage{
 proxy_episode_dates(
   x,
@@ -15,29 +15,46 @@ proxy_episode_dates(
 )
 }
 \arguments{
-\item{x}{a data frame; will be converted to a data.table}
+\item{x}{A \code{data.frame} or \code{data.table}. Will be converted to a
+\code{data.table} if not already.}
 
-\item{group_vars}{a vector containing any variables to be used for
-record grouping, minimum is a patient identifier}
+\item{group_vars}{Character vector of grouping variables (e.g., patient ID,
+provider). At least one identifier must be supplied.}
 
-\item{spell_start_date}{Inpatient provider spell or episode admission date}
+\item{spell_start_date}{Name of the column containing the episode or spell
+start date.}
 
-\item{spell_end_date}{Inpatient provider spell or episode discharge  date}
+\item{spell_end_date}{Name of the column containing the episode or spell
+end date.}
 
-\item{discharge_destination}{CDS discharge destination code}
+\item{discharge_destination}{Name of the column containing the CDS discharge
+destination code.}
 
-\item{.dropTmp}{default TRUE; a logical to drop all tmp values used}
+\item{.dropTmp}{Logical (default \code{TRUE}). If \code{TRUE}, temporary processing
+columns are removed before returning the result.}
 
-\item{.forceCopy}{default FALSE; TRUE will force data.table to take a copy
-instead of editing the data without reference}
+\item{.forceCopy}{Logical (default \code{FALSE}).
+If \code{FALSE}, the input is converted to a \code{data.table} and modified by
+reference.
+If \code{TRUE}, the input must already be a \code{data.table}, and the function will
+create an explicit copy to avoid modifying the original object.}
 }
 \value{
-a data.table with cleaned start and end dates, and an indicator proxy_missing where the value has changed
+A \code{data.table} containing:
+\itemize{
+\item Cleaned spell start and end dates.
+\item A flag variable (\code{proxy_missing}) indicating whether a date was modified
+and the rule applied (0–4).
+}
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
 
-Correcting for missing end dates on HES/SUS episodes
+A utility for cleaning and imputing missing or inconsistent episode end dates
+in HES/SUS–style inpatient data. The function identifies missing, invalid,
+or overlapping spell dates within patient/provider groups and applies
+deterministic rules to correct them. It also assigns a flag (\code{proxy_missing})
+indicating whether a value was modified and why.
 }
 \examples{
 

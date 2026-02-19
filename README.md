@@ -1,21 +1,23 @@
-
-# Epidemiological Data Management (epidm)
+# epidm <img src="man/figures/logo.png" align="right" height="139" alt="" />
 
 <!-- badges: start -->
+[![Lifecycle: stable](https://img.shields.io/badge/lifecycle-stable-green.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
+[![R-CMD-check](https://github.com/ukhsa-collaboration/epidm/actions/workflows/R-CMD-check.yaml/badge.svg?branch=main)](https://github.com/ukhsa-collaboration/epidm/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-The goal of `epidm` is provide standard methods for the management and transformation of UK Public Health data.
-
-[The full function guide can be found here](https://alexbhatt.github.io/epidm/)
+`epidm` provides standard methods for the management and transformation of UK Public Health data in R
 
 ## Installation
 
-Available via CRAN or you can download the development version via [GitHub](https://github.com/alexbhatt/epidm)
+epiviz can be installed from GitHub using the following code:
+```r
+# Install epidm
+remotes::install_github('ukhsa-collaboration/epidm')
 
-``` R
-install.packages("epidm")
-devtools::install_github("alexbhatt/epidm")
-```
+# To install the development version
+remotes::install_github("ukhsa-collaboration/epidm@dev")
+``` 
+
 ## Purpose
 
 The `epidm` package has been developed to share standard methods for the 

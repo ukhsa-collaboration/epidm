@@ -1,46 +1,66 @@
-#' Link A&E to Inpatient records
+#' Link A&E (ECDS) records to Inpatient (HES/SUS) spells
 #'
 #' @description
 #' `r lifecycle::badge('experimental')`
 #'
-#'
-#' Link together ECDS A&E records to HES/SUS inpatient records on
-#'   NHS number, Hospital Number and Date of Birth and organisation code.
-#'   To note that the inpatient records should already be aggregated into
-#'   spells at the desired level (standard, CIP or Mega)
+#' Links Emergency Care Data Set (ECDS) **A&E records** to **inpatient spells**
+#' (HES/SUS) using patient identifiers (NHS number, hospital number, date of birth),
+#' organisation code, and a **link date**. The inpatient records should already be
+#' aggregated to the desired spell level (e.g., provider spell, CIP, or “mega” spell).
+#' The output is a patient-level linked table suitable for downstream pathway analysis.
 #'
 #' @seealso group_time continuous_inpatient_spells
 #'
+#' @section Workflow context:
+#' Use `link_ae_inpatient()` **after**:
+#' - ECDS A&E data are cleaned/standardised (e.g., discharge categories via `lookup_recode()`).
+#' - Inpatient records have been **aggregated to spells** (e.g., `cip_spells()` for continuous inpatient spells).
+#'
+#' Use it **before**:
+#' - Rejoining to SGSS infection episodes (e.g., outputs of `group_time()`),
+#'   or deriving `hospital_in_out_dates` for entry/exit timelines.
+#'
 #' @import data.table
 #'
-#' @param ae a list to provide data and columns for the A&E (ECDS) data; all arguments provided quoted unless specified
-#'  \describe{
-#'    \item{`data`}{the ECDS A&E dataset provided unquoted}
-#'    \item{`record_id`}{a unique id within the dataset to be retained; optional}
-#'    \item{`arrival_date`}{the ECDS arrival date}
-#'    \item{`departure_date`}{the ECDS discharge date}
-#'    \item{`nhs_number`}{the patient NHS number}
-#'    \item{`hospital_number`}{the patient Hospital numbers also known as the local patient identifier}
-#'    \item{`patient_dob`}{patient date of birth}
-#'    \item{`org_code`}{the NHS trust organisation codes}
-#'   }
-#' @param inp a list to provide data and columns for the inpatient (SUS/HES) data
-#'   \describe{
-#'   \item{`data`}{the HES/SUS inpatient dataset provided unquoted}
-#'    \item{`record_id`}{a unique id within the dataset to be retained; optional}
-#'   \item{`spell_start_date`}{a string containing the inpatient (SUS/HES) admission date column name; all arguments provided quoted unless specified}
-#'   \item{`spell_id`}{the HES/SUS spell id}
-#'   \item{`nhs_number`}{the patient NHS number}
-#'   \item{`hospital_number`}{the patient Hospital numbers also known as the local patient identifier}
-#'   \item{`patient_dob`}{patient date of birth}
-#'   \item{`org_code`}{the NHS trust organisation codes}
-#'   }
-#' @param .forceCopy a boolean to control if you want to copy the dataset before
-#'   linking together
+#' @param ae A named **list** describing the A&E (ECDS) input with quoted column names:
+#' \describe{
+#'   \item{`data`}{ECDS A&E dataset (unquoted object).}
+#'   \item{`record_id`}{Optional unique row id to retain.}
+#'   \item{`arrival_date`}{A&E arrival date column.}
+#'   \item{`departure_date`}{A&E departure date column.}
+#'   \item{`nhs_number`}{NHS number column.}
+#'   \item{`hospital_number`}{Local patient identifier column.}
+#'   \item{`patient_dob`}{Date of birth column.}
+#'   \item{`org_code`}{Provider organisation code column.}
+#' }
 #'
-#' @return a patient level linked hospital record
+#' @param inp A named **list** describing the inpatient (HES/SUS) input with quoted column names:
+#' \describe{
+#'   \item{`data`}{Inpatient dataset (unquoted object).}
+#'   \item{`record_id`}{Optional unique row id to retain.}
+#'   \item{`spell_start_date`}{Inpatient spell start/admission date column.}
+#'   \item{`spell_id`}{Spell identifier to carry through (e.g., CIP or mega spell id).}
+#'   \item{`nhs_number`}{NHS number column.}
+#'   \item{`hospital_number`}{Local patient identifier column.}
+#'   \item{`patient_dob`}{Date of birth column.}
+#'   \item{`org_code`}{Provider organisation code column.}
+#' }
+#'
+#' @param .forceCopy Logical (default `FALSE`).
+#'   If `FALSE`, the input is converted to a `data.table` and modified by
+#'   reference.
+#'   If `TRUE`, the input must already be a `data.table`, and the function will
+#'   create an explicit copy to avoid modifying the original object.
+#'
+#' @return
+#' A **linked `data.table`** at **patient/spell level** containing:
+#' - Harmonised identifiers (NHS number / hospital number, DOB, org code)
+#' - A&E arrival/departure dates
+#' - Inpatient spell identifiers and spell start date
+#' - (If supplied) preserved `record_id` columns (tagged `*_ae` / `*_inp`)
 #'
 #' @keywords internal
+#' @export
 #' @examples
 #' \dontrun{
 #' sample_ae <- data.table::data.table(
@@ -324,6 +344,28 @@ link_ae_inpatient <- function(
     ),
     .forceCopy = FALSE) {
 
+
+  # Define required fields
+  required_ae <- c("data", "nhs_number", "hospital_number", "patient_dob", "org_code", "arrival_date", "departure_date")
+  required_inp <- c("data", "nhs_number", "hospital_number", "patient_dob", "org_code", "spell_id", "spell_start_date")
+
+  # Check ae fields
+  missing_ae <- setdiff(required_ae, names(ae))
+  if (length(missing_ae) > 0) {
+    stop(paste("Missing required fields in 'ae':", paste(missing_ae, collapse = ", ")))
+  }
+
+  # Check inp fields
+  missing_inp <- setdiff(required_inp, names(inp))
+  if (length(missing_inp) > 0) {
+    stop(paste("Missing required fields in 'inp':", paste(missing_inp, collapse = ", ")))
+  }
+
+  ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(data)) {
+    stop(force_copy_error)
+  }
+
   if (.forceCopy) {
     inp$data <- data.table::copy(inp$data)
     ae$data <- data.table::copy(ae$data)
@@ -369,16 +411,39 @@ link_ae_inpatient <- function(
   inpNHS <- inp$data[!is.na(x),
                      env = list(x = ae$nhs_number)]
 
+  # Map ae df
   aeNHS[, c('link_id',
             'link_dob',
             'link_org') := .(get(ae$nhs_number),
                              get(ae$patient_dob),
                              get(ae$org_code))]
+
+  # Set ae record_id if present and create object to add to cols
+  # Set to NULL if not present otherwise overwrite
+  ae_record_out <- NULL
+
+  if (!is.null(ae$record_id) && nzchar(ae$record_id) && ae$record_id %chin% names(aeNHS)) {
+    ae_record_out <- paste0(ae$record_id, "_ae")
+    setnames(aeNHS, old = ae$record_id, new = ae_record_out)
+  }
+
+  # Map inp df
   inpNHS[, c('link_id',
              'link_dob',
              'link_org') := .(get(ae$nhs_number),
                               get(ae$patient_dob),
                               get(ae$org_code))]
+
+
+  # Set inp record_id if present and create object to add to cols
+  # Set to NULL if not present otherwise overwrite
+  inp_record_out <- NULL
+
+  if (!is.null(inp$record_id) && nzchar(inp$record_id) && inp$record_id %chin% names(inpNHS)) {
+    inp_record_out <- paste0(inp$record_id, "_inp")
+    setnames(inpNHS, old = inp$record_id, new = inp_record_out)
+  }
+
 
   ## valid hospital number links
   aeHOS <- ae$data[
@@ -465,12 +530,40 @@ link_ae_inpatient <- function(
   linknames[[ae$org_code]] <-  grep(ae$org_code,names(link),value=TRUE)
 
   # if an ID column exists
-  if("id.ae" %in% names(link)) {
-    link[, id := data.table::fifelse(is.na(id.ae),id.inp,id.ae)]
+
+  # Ensure we have the dynamic names and they exist in `link`
+  has_ae_id  <- !is.null(ae_record_out)  && ae_record_out  %chin% names(link)
+  has_inp_id <- !is.null(inp_record_out) && inp_record_out %chin% names(link)
+
+  if (has_ae_id && has_inp_id) {
+    # Both present: choose AE when not NA, otherwise INP
+    link[, id := data.table::fifelse(
+      is.na(get(ae_record_out)),
+      get(inp_record_out),
+      get(ae_record_out)
+    )]
+    id_out <- "id"
+
+  } else if (has_ae_id) {
+    # Only AE present
+    link[, id := get(ae_record_out)]
+    id_out <- "id"
+
+  } else if (has_inp_id) {
+    # Only INP present
+    link[, id := get(inp_record_out)]
+    id_out <- "id"
+
+  } else {
+
+    id_out <- NULL
   }
 
+
   ## loop through identifiers and consolidate
-  ids <- as.vector(unlist(lapply(ae[c(4:length(ae))],`[[`,1)))
+  #ids <- as.vector(unlist(lapply(ae[c(4:length(ae))],`[[`,1)))
+  ids <- names(linknames)
+
   for(i in ids){
 
     link[,(i) := data.table::fifelse(is.na(v1),v2,v1),
@@ -507,26 +600,6 @@ link_ae_inpatient <- function(
   #        ]
   # }
 
-  ## if you want to keep a uid column
-  cols <- as.vector(unlist(lapply(ae[c(2:length(ae))],`[[`,1)))
-
-  if(exists('record_id',where=ae) & exists('record_id',where=inp)){
-    if(ae$record_id == inp$record_id){
-
-      names(link) <- gsub(paste0(ae$record_id,'.ae'),
-                          paste0(ae$record_id,'_ae'),
-                          names(link))
-
-      names(link) <- gsub(paste0(ae$record_id,'.inp'),
-                          paste0(ae$record_id,'_inp'),
-                          names(link))
-
-      cols <- gsub(paste0('^',ae$record_id), paste0(ae$record_id,"_ae"), cols)
-      cols <- c(cols, paste0(inp$record_id,"_inp"))
-
-    }
-  }
-
   ## capture and delete extra cols
   rmcols <- c(
     grep("link_",names(link),value = TRUE),
@@ -534,6 +607,18 @@ link_ae_inpatient <- function(
     grep("[\\.]inp",names(link),value = TRUE))
 
   link[, (rmcols) := NULL]
+
+  # Remove exact duplicates across all columns
+  link <- unique(link)
+
+  # Get cols names required from original ae df
+  cols <- as.vector(unlist(lapply(ae[c(3:length(ae))],`[[`,1)))
+
+  # add on column names for record_id and id if present
+  cols <- c(cols, ae_record_out, inp_record_out, id_out)
+
+  # Remove nulls if record_id/id not present
+  cols <- unique(na.omit(cols))
 
   ## put ID cols at the beginning
   data.table::setcolorder(x = link,

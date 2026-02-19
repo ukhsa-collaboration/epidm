@@ -17,7 +17,8 @@ respeciate_generic(
 \item{x}{a data.frame or data.table object}
 
 \item{group_vars}{the minimum grouping set of variables for like samples in
-a character vector; suggest c('patient_id','specimen_type','genus')}
+a character vector; suggest c('patient_id','specimen_type') - genus will automatically
+be included in the groupby. This is built from the species_col}
 
 \item{species_col}{a character containing the column with the organism species_col
 name}
@@ -27,8 +28,11 @@ name}
 \item{window}{an integer representing the number of days for which you will
 allow a sample to be respeciated}
 
-\item{.forceCopy}{default FALSE; TRUE will force data.table to take a copy
-instead of editing the data without reference}
+\item{.forceCopy}{Logical (default \code{FALSE}).
+If \code{FALSE}, the input is converted to a \code{data.table} and modified by
+reference.
+If \code{TRUE}, the input must already be a \code{data.table}, and the function will
+create an explicit copy to avoid modifying the original object.}
 }
 \value{
 a data.table with a recharacterised \code{species_col} column
@@ -40,6 +44,9 @@ Some samples within SGSS are submitted by laboratories as "GENUS SP" or
 "GENUS UNNAMED". However, they may also have a fully identified sample taken
 from the same site within a recent time period.  This function captures
 species_col  from another sample within X-days of an unspeciated isolate.
+Respeciation is restricted to organisms of the same genus; species will not
+be inferred from isolates belonging to a different genus. Trailing "UNNAMED"
+is normalised to "SP" before any processing.
 }
 \examples{
 

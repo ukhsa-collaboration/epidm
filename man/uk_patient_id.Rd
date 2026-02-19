@@ -5,28 +5,29 @@
 \title{Patient ID record grouping}
 \usage{
 uk_patient_id(
-  data,
+  x,
   id = list(nhs_number = "nhs_number", hospital_number = "patient_hospital_number",
     date_of_birth = "date_of_birth", sex_mfu = "sex", forename = "forename", surname =
     "surname", postcode = "postcode"),
   .useStages = c(1:11),
-  .sortOrder,
+  .keepStages = FALSE,
   .keepValidNHS = FALSE,
+  .sortOrder,
   .forceCopy = FALSE
 )
 }
 \arguments{
-\item{data}{a data.frame or data.table containing the patient data}
+\item{x}{A \code{data.frame} or \code{data.table} with patient identifiers.}
 
-\item{id}{a named list to provide the column names with identifiers, quoted
+\item{id}{A \strong{named list} of quoted column names:
 \describe{
-\item{\code{nhs_number}}{the patient NHS number}
-\item{\code{hospital_number}}{the patient Hospital numbers also known as the local patient identifier}
-\item{\code{date_of_birth}}{the patient date of birth}
-\item{\code{sex_mfu}}{the patient sex or gender field as Male/Female/Unknown}
-\item{\code{forename}}{the patient forename}
-\item{\code{surname}}{the patient surname}
-\item{\code{postcode}}{the patient postcode}
+\item{\code{nhs_number}}{NHS number.}
+\item{\code{hospital_number}}{Local patient identifier (hospital number).}
+\item{\code{date_of_birth}}{Date of birth.}
+\item{\code{sex_mfu}}{Sex/gender (M/F/Unknown).}
+\item{\code{forename}}{Forename / first name.}
+\item{\code{surname}}{Surname / last name.}
+\item{\code{postcode}}{Patient postcode.}
 }}
 
 \item{.useStages}{optional, default 1:11; set to 1 if you wish patient ID to
@@ -44,59 +45,145 @@ wish patient ID to be assigned cases with the same DOB and fuzzy name, set to
 set to 11 if you wish patient ID to be assigned cases with the same first name
 or second name in changing order and date of birth.}
 
-\item{.sortOrder}{optional; a column as a character to allow a sorting
-order on the id generation}
+\item{.keepStages}{optional, default FALSE; to generate a new column (stageMatch)
+to retain the stage information for which the record matched the group.}
 
 \item{.keepValidNHS}{optional, default FALSE; set TRUE if you wish to retain
 the column with the NHS checksum result stored as a BOOLEAN}
+
+\item{.sortOrder}{optional; a column as a character to allow a sorting
+order on the id generation}
 
 \item{.forceCopy}{optional, default FALSE; TRUE will force data.table to take a copy
 instead of editing the data without reference}
 }
 \value{
-A dataframe with one new variable:
+A \code{data.table} with the original columns plus:
 \describe{
-\item{\code{id}}{a unique patient id}
-\item{\code{valid_nhs}}{if retained using argument \code{.keepValidNHS=TRUE}, a
-BOOLEAN containing the result of the NHS checksum validation}
+\item{\code{id}}{Integer patient identifier assigned by staged matching.}
+\item{\code{valid_nhs}}{(Optional) BOOLEAN NHS checksum flag; included when \code{.keepValidNHS = TRUE}.}
 }
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
 
-Groups patient records from multiple isolates with a single integer patientID
-by grouping patient identifiers.
-
-Grouping is based on the following stages:
+Assigns a \strong{single integer \code{id}} to records that belong to the same patient by
+applying a sequence of \strong{deterministic matching stages} across common identifiers
+(NHS number, hospital number, DOB, name, sex, postcode). Identifiers are
+standardised, validated using NHS checksum function, and fuzzy name keys are
+used in later stages.
+'
+Matching is performed in order through the following stages (first match is applied):
 \enumerate{
-\item matching nhs number and date of birth
-\item Hospital number &  Date of Birth
-\item NHS number & Hospital Number
-\item NHS number & Name
-\item Hospital number & Name
-\item Sex & Date of Birth & Surname
-\item Sex & Date of Birth & Fuzzy Name
-\item Sex & Year and Month of Birth & Fuzzy Name
-\item Postcode & Name
-\item Name Swaps (when first and last name are the wrong way around)
+\item NHS number + date of birth
+\item Hospital number + date of birth
+\item NHS number + hospital number
+\item NHS number + surname
+\item Hospital number + surname
+\item Date of birth + surname (only where NHS is invalid/absent)
+\item Sex + full name (forename + surname)
+\item Sex + date of birth + fuzzy name (Soundex; surname + initial)
+\item Date of birth (YYYY-MM) + fuzzy name
+\item Surname/forename + postcode
+\item Name swaps (forename/surname reversed) + date of birth
+}
+
+Use \code{.useStages} to restrict which stages are applied (default: \code{1:11}).
+The function generates a reproducible \code{id} per patient within the sort order;
+you can provide \code{.sortOrder} (e.g., a date column) to make assignment deterministic.
+
+\strong{Validity rules applied:}
+\itemize{
+\item \strong{NHS number} validated using the standard checksum (\code{epidm::valid_nhs()}).
+\item \strong{Hospital number}: excludes known placeholders (e.g., \code{"UNKNOWN"}, \code{"NO PATIENT ID"}).
+\item \strong{DOB}: excludes proxy or missing dates (\code{"1900-01-01"}, \code{"1800-01-01"}, \code{NA}).
+\item \strong{Sex}: normalised to \code{"M"} / \code{"F"}; others → \code{NA}.
+\item \strong{Names}: uppercased, Latin characters normalised; Soundex used for fuzzy matching.
 }
 
 Identifiers are copied over where they are missing or invalid to the grouped
 records.
 }
+\section{Workflow context}{
+
+\code{uk_patient_id()} is typically used early to harmonise patient identity
+across isolates before downstream tasks such as specimen episode grouping
+(\code{group_time()}), dataset linkage (e.g., to HES/SUS/ECDS), and
+epidemiological reporting.
+}
+
 \examples{
+id_test <-
+  data.frame(
+    stringsAsFactors = FALSE,
+    record_id = c(1L,2L,3L,4L,
+                  5L,6L,7L,8L,9L,10L,11L,12L,13L,14L,15L,
+                  16L,17L,18L,19L,20L,21L,22L,23L,24L),
+    nhs_number = c(9435754422,
+                   9435754422,NA,9435754422,5555555555,NA,
+                   9435773982,NA,9999999999,NA,9435773982,NA,
+                   9435802508,9435802508,NA,NA,9435802508,9435802508,NA,
+                   3333333333,NA,9999999999,9435817777,
+                   9435817777),
+    local_patient_identifier = c(NA,"IG12067",
+                                 NA,NA,"IG12067","IG12067","KR2535","KR2535",
+                                 "KR2535",NA,NA,NA,"UK8734","UK8734",NA,NA,
+                                 "UK8734","UK8734",NA,NA,"JH45204",
+                                 "HS45202","HS45202","JH45204"),
+    patient_birth_date = c("1993-07-16",
+                           "1993-07-16","1993-07-16","1993-07-16",
+                           "1993-07-16",NA,"1967-02-10",NA,"1967-02-10",NA,NA,
+                           "1967-02-10",NA,NA,"1952-10-22","1952-10-22",
+                           "1952-10-22",NA,"1947-09-14","1947-09-14",
+                           "1947-09-14","1947-09-14","1947-09-14",
+                           "1947-09-14"),
+    sex = c("Male","Male",
+            "Male","Male",NA,"Male","Female","Female",
+            "Female","Female","Female","Female","Male",
+            "Male","Male","Male","Male","Male","Male",
+            "Male","Male","Male",NA,"Male"),
+    forename = c(NA,"DENNIS",
+                 NA,NA,"DENNIS",NA,"ELLIE","ELLIE",NA,
+                 "ELLIE","ELLIE","ELLIE","IAN","IAN","MALCOLM",
+                 "IAN","IAN",NA,"GRANT","ALAN","ALAN","ALAN",
+                 "GRANT","ALAN"),
+    surname = c(NA,"NEDRY",
+                "NEDRY",NA,"NEDRY","NEDRY","SATTLER","SATTLER",
+                NA,"SATTLER","SATTLER","SATTLER","M",NA,
+                "IAN","MALCOLM","MALCOLM",NA,"ALAN","GRANT",
+                "GRANT","GRANT","ALAN","GRANT"),
+    postcode = c("HA4 0FF",
+                 "HA4 0FF","HA4 0FF",NA,"HA4 0FF","HA4 0FF",
+                 "L3 1DZ","L3 1DZ","L3 1DZ","L3 1DZ",NA,"L3 1DZ",
+                 "BN14 9EP",NA,"BN14 9EP",NA,NA,NA,"CW6 9TX",
+                 "CW6 9TX",NA,NA,NA,NA),
+    specimen_date = c("2024-08-14",
+                      "2023-02-03","2023-02-07","2023-02-04",
+                      "2023-02-09","2024-08-14","2021-03-28","2021-03-28",
+                      "2021-03-28","2021-03-28","2021-03-28",
+                      "2021-03-28","2024-07-06","2024-07-06","2024-07-06",
+                      "2023-10-31","2023-10-31","2023-10-31",
+                      "2022-01-23","2022-01-24","2022-01-25","2022-01-26",
+                      "2022-01-27","2022-01-28")
+  )
+
+data.table::setDT(id_test)
+
 uk_patient_id(
- data = head(epidm::lab_data),
- id = list(
-   nhs_number = 'nhs_number',
-   hospital_number = 'local_patient_identifier',
-   date_of_birth = 'patient_birth_date',
-   sex_mfu = 'sex',
-   forename = 'forename',
-   surname = 'surname'
-   postcode = 'postcode'
- ),
- .sortOrder = 'specimen_date',
- .forceCopy = TRUE
-)[]
+  x = id_test,
+  id = list(
+    nhs_number = 'nhs_number',
+    hospital_number = 'local_patient_identifier',
+    date_of_birth = 'patient_birth_date',
+    sex_mfu = 'sex',
+    forename = 'forename',
+    surname = 'surname',
+    postcode = 'postcode'
+  ),
+  .sortOrder = 'specimen_date',
+  .useStages = c(1:11),
+  .keepStages = TRUE,
+  .forceCopy = TRUE)[]
+
+
 }

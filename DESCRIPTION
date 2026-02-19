@@ -1,20 +1,22 @@
 Package: epidm
-Version: 1.0.5
+Version: 1.0.6
 Title: UK Epidemiological Data Management
 Authors@R: 
     c(
         person("Alex", "Bhattacharya", email = "alex.bhatt@gmail.com", role = c("aut", "cre")),
         person("Alice", "Graham", email = "graham.alice@gmail.com", role = c("aut"), comment = c(ORCID = "0000-0003-3000-2771")),
-        person("Harshana", "Liyanage", email = "harshanal@gmail.com", role = c("aut"), comment = c(ORCID = "0000-0001-9738-6349"))
+        person("Harshana", "Liyanage", email = "harshanal@gmail.com", role = c("aut"), comment = c(ORCID = "0000-0001-9738-6349")),
+        person("Frederick", "Sloots", email = "frederick.sloots@ukhsa.gov.uk", role = c("aut"), comment = c(ORCID = "0009-0006-4927-8937")), 
+        person("Emma", "Parker", email = "emma.k.parker@ukhsa.gov.uk", role = c("aut"), comment = c(ORCID = "0009-0007-8485-5303"))
     )
 Description: Contains utilities and functions for the cleaning, processing and
     management of patient level public health data for surveillance
     and analysis held by the UK Health Security Agency, UKHSA.
-URL: https://github.com/alexbhatt/epidm, https://alexbhatt.github.io/epidm/
-BugReports: https://github.com/alexbhatt/epidm/issues
+URL: https://github.com/ukhsa-collaboration/epidm
+BugReports: https://github.com/ukhsa-collaboration/epidm/issues
 License: GPL (>= 3)
 Depends:
-    R (>= 3.1)
+    R (>= 4.4.0)
 Imports:
     data.table,
     DBI,
@@ -26,8 +28,19 @@ Imports:
     stringi,
     stringr,
     utils,
-    lubridate
+    lubridate,
+    knitr,
+    rmarkdown,
+    ggplot2,
+    DiagrammeR
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    patrick
+Config/testthat/edition: 3
+VignetteBuilder: knitr

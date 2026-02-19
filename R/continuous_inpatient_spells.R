@@ -3,37 +3,44 @@
 #' @description
 #' `r lifecycle::badge('stable')`
 #'
+#' Creates **Continuous Inpatient (CIP) spells** by combining one or more
+#' provider spells into a single uninterrupted period of inpatient care.
+#' CIP definitions follow the NHS Digital methodology: transfers between
+#' providers can be part of the same CIP spell where specific admission,
+#' discharge, and timing criteria are met. A CIP spell begins when a patient is
+#' admitted under consultant care and ends when they are discharged or die.
+#' http://content.digital.nhs.uk/media/11859/Provider-Spells-Methodology/pdf/Spells_Methodology.pdf
 #'
-#' A continuous inpatient (CIP) spell is a continuous period of care
-#'   within the NHS, which does allow specific types of transfers
-#'   to take place. It can therefore be made up of one or more provider
-#'   spells. A CIP spell starts when a decision has been made to admit
-#'   the patient, and a consultant has taken responsibility for their care.
-#'   The spell ends when the patient dies or is discharged from hospital.
-#'   This follows the NHS Digital Provider Spells Methodology:
-#'   http://content.digital.nhs.uk/media/11859/Provider-Spells-Methodology/pdf/Spells_Methodology.pdf
+#' Where spells meet the CIP criteria, they are merged into a continuous spell.
+#' The output includes a CIP index and the derived start and end dates for
+#' the full CIP period.
 #'
 #' @import data.table
 #'
-#' @param x a data frame; will be converted to a data.table
-#' @param group_vars a vector containing any variables to be used for
-#'   record grouping, minimum is a patient identifier
-#' @param spell_start_date Inpatient provider spell or episode admission date
-#' @param admission_method CDS admission method code
-#' @param admission_source CDS admission source code
-#' @param spell_end_date Inpatient provider spell or episode discharge  date
-#' @param discharge_destination CDS discharge destination code
-#' @param patient_classification CDS patient classification code
-#' @param .forceCopy default FALSE; TRUE will force data.table to take a copy
-#'   instead of editing the data without reference
+#' @param x A data.frame or data.table; will be converted to a data.table (usually HES/SUS data)
+#' @param group_vars Character vector of variables used to group records
+#'   (minimum: a patient identifier).
+#' @param spell_start_date Quoted column name containing the provider spell
+#'   admission date.
+#' @param admission_method CDS admission method code.
+#' @param admission_source CDS admission source code.
+#' @param spell_end_date Quoted column name containing the provider spell
+#'   discharge date.
+#' @param discharge_destination CDS discharge destination code.
+#' @param patient_classification CDS patient classification code.
+#' @param .forceCopy Logical (default `FALSE`).
+#'   If `FALSE`, the input is converted to a `data.table` and modified by
+#'   reference.
+#'   If `TRUE`, the input must already be a `data.table`, and the function will
+#'   create an explicit copy to avoid modifying the original object.
 #'
-#' @return the original data.frame as a data.table
-#'   with the following new fields:
+#' @return
+#' A `data.table` containing the original data and three new variables:
 #' \describe{
-#'   \item{`cip_indx`}{an id field for the CIP spell}
-#'   \item{`cip_spell_start`}{the start date for the CIP spell}
-#'   \item{`cip_spell_end`}{the end date for the CIP spell}
-#'   }
+#'   \item{`cip_indx`}{Unique identifier for the derived CIP spell.}
+#'   \item{`cip_spell_start`}{Start date for the continuous inpatient spell.}
+#'   \item{`cip_spell_end`}{End date for the continuous inpatient spell.}
+#' }
 #'
 #' @examples
 #' cip_test <- data.frame(
@@ -125,22 +132,53 @@ cip_spells <- function(x,
                        patient_classification,
                        .forceCopy = FALSE) {
 
+
+  if (!is.data.frame(x) && !data.table::is.data.table(x)) {
+    stop("Input `x` must be a data.frame or data.table.")
+  }
+
+  # Error handling
+
+  # Validate input columns
+  required_cols <- c(group_vars, spell_start_date, admission_method, admission_source,
+                     spell_end_date, discharge_destination, patient_classification)
+
+  missing_cols <- setdiff(required_cols, names(x))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+
+  # Validate date column
+  if (!inherits(x[[spell_start_date]], "Date") || !inherits(x[[spell_end_date]], "Date")) {
+    stop("Columns for spell start and end dates must be of type Date.")
+  }
+
+  # Check for empty data
+  if (nrow(x) == 0) {
+    stop("Input data has zero rows. Cannot compute CIP spells.")
+  }
+
+  # Validate grouping variables
+  if (anyDuplicated(group_vars)) {
+    stop("`group_vars` contains duplicates. Provide unique column names.")
+  }
+
+  # Warning about missing dates
+  if (anyNA(x[[spell_start_date]]) || anyNA(x[[spell_end_date]])) {
+    warning("There are missing values in date columns. Results may be affected.")
+  }
+
+  ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(x)) {
+    stop(force_copy_error)
+  }
+
   ## convert data.frame to data.table or take a copy
   if(.forceCopy) {
     x <- data.table::copy(x)
   } else {
     data.table::setDT(x)
   }
-
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # cip_indx <-
-  #   tmp.spellN <-
-  #   tmp.cip2daydiff <- tmp.cipTransfer <- tmp.cipExclude <-
-  #   tmp.dateNumStart <- tmp.dateNumEnd <- tmp.regular_attender <-
-  #   tmp.windowNext <- tmp.windowCmax <-
-  #   NULL
 
   ## just arrange the data
   data.table::setorderv(x,c(eval(group_vars),spell_start_date))

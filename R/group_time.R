@@ -1,16 +1,72 @@
-#'
-#' @title Grouping of intervals or events in time together
+#' @title Grouping of intervals or events that occur close together in time
 #'
 #' @description
 #' `r lifecycle::badge('stable')`
 #'
+#' A utility function to group together observations that represent
+#' **overlapping date intervals** (e.g., hospital admission spells) or
+#' **events occurring within a defined time window** e.g., specimen dates
+#' grouped into infection episodes. The function supports both:
 #'
-#' Group across multiple observations of
-#'  overlapping time intervals, with defined start and end dates,
-#'  or events within a static/fixed or rolling window of time.
-#'  These are commonly used with inpatient HES/SUS data to group spells with
-#'  defined start and end dates,  or to group positive specimen tests,
-#'  based on specimen dates together into infection episodes.
+#' • **Interval-based grouping**: records have a start and an end date; any
+#'   overlapping intervals are grouped together.
+#' • **Event-based grouping**: records have only a start date and are grouped
+#'   using either a *static* or *rolling* time window.
+#'
+#' The output provides a unique index per group and the minimum/maximum date that
+#' define the resulting aggregated episode or interval.
+#'
+#' @details
+#' ## How the function works
+#'
+#' The behaviour depends on whether `date_end` is supplied:
+#'
+#' ### 1. **Interval-based grouping (start + end dates)**
+#' If both `date_start` and `date_end` are provided, the function identifies
+#' overlapping intervals within the same `group_vars` grouping. Any intervals
+#' that overlap are combined into a single episode.
+#'
+#' This method is typically used for:
+#' - Hospital spells (HES/SUS)
+#' - Contact periods or inpatient stays
+#'
+#' ### 2. **Event-based grouping (single-date events)**
+#' If only `date_start` is supplied, records are grouped using a **time window**
+#' defined by the `window` argument.
+#'
+#' Two approaches are supported:
+#'
+#' - **`window_type = "static"`**
+#'   A fixed window is applied starting from the first event in the group. All
+#'   events occurring within the window are grouped until a gap exceeds the
+#'   threshold, at which point a new episode begins.
+#'
+#' - **`window_type = "rolling"`**
+#'   A dynamic window where each event extends the episode end point. An event
+#'   is grouped as long as it occurs within `window` days of the most recent
+#'   event in the same episode.
+#'
+#' ## Handling of missing values
+#' Records missing `date_start` cannot be grouped and are returned with `indx`
+#' = `NA`. These rows are appended back to the final output.
+#'
+#' @section Workflow context: how `group_time()` might be used in a pipeline
+#' **1) SGSS specimen data – infection episode grouping (event-based)**
+#' After organism/specimen harmonisation (e.g., via `lookup_recode()`),
+#' `group_time()` groups specimen dates into infection episodes using a defined
+#' time window. This helps identify clusters of related positive tests for the
+#' same patient and organism.
+#'
+#' **2) HES/SUS inpatient data – continuous spell grouping (interval-based)**
+#' When start and end dates of inpatient stays are available, `group_time()`
+#' collapses overlapping intervals into a single continuous hospital spell.
+#' This is used before linking SGSS infection episodes to inpatient activity.
+#'
+#' **3) Integration across datasets**
+#' The outputs from `group_time()` are used downstream to determine whether
+#' infection events fall within or around periods of hospital care,
+#' enabling combined SGSS–HES/SUS–ECDS analyses.
+#'
 #'
 #' @import data.table
 #'
@@ -18,13 +74,45 @@
 #' @param group_vars in a vector, the all columns used to group records, quoted
 #' @param date_start column containing the start dates for the grouping,
 #'   provided quoted
+#
+#' @param x A data.frame or data.table containing date variables for grouping.
+#'   Will be converted to a data.table internally.
+#' @param group_vars Character vector of quoted column names used to partition
+#'   the data before grouping.
+#' @param date_start Quoted column name giving the start date for each record.
+#' @param date_end Optional quoted column name giving the end date for interval
+#'   records. When omitted, event-based grouping is used.
+#' @param window Integer (days) defining the grouping threshold for event-based
+#'   methods. Required when `date_end` is missing.
+#' @param window_type Character: `"static"` or `"rolling"`. Determines how
+#'   events are grouped when only a start date is present.
+#' @param indx_varname Name of the output column containing the episode or
+#'   interval index. Default: `"indx"`.
+#' @param min_varname Name of the output column containing the minimum date
+#'   in each grouped episode. Default: `"date_min"`.
+#' @param max_varname Name of the output column containing the maximum date
+#'   in each grouped episode. Default: `"date_max"`.
+#' @param .forceCopy Logical (default `FALSE`).
+#'   If `FALSE`, the input is converted to a `data.table` and modified by
+#'   reference.
+#'   If `TRUE`, the input must already be a `data.table`, and the function will
+#'   create an explicit copy to avoid modifying the original object.
 #'
+#' @return
+#' A `data.table` containing all original columns plus:
 #' @param date_end column containing the end dates for the *interval*, quoted
 #'
 #' @param window an integer representing a time window in days which will be
 #'   applied to the start date for grouping *events*
 #' @param window_type character, to determine if a 'rolling' or 'static'
-#'   grouping method should be used when grouping *events*
+#'   grouping method should be used when grouping *events*.
+#'   A *'static'* window will identify the first event, and all records X days
+#'   from that event will be attributed to the same episode. Eg. in a 14 day
+#'   window, if first event is on 01 Mar, and events on day 7 Mar and 14 Mar will be
+#'   grouped, but an event starting 15 Mar days after will start a new episode.
+#'   A *'rolling'* window resets the day counter with each new event. Eg.
+#'   Events on 01 Mar, 07 Mar, 14 Mar and 15 Mar are all included in a single episode,
+#'   as will any additional events up until the 29 Mar (assuming a 14-day window).
 #'
 #' @param indx_varname a character string to set variable name for the
 #'   index column which provides a grouping key; default is indx
@@ -35,8 +123,6 @@
 #' @param .forceCopy default FALSE; TRUE will force data.table to take a copy
 #'   instead of editing the data without reference
 #'
-#' @return the original data.frame as a data.table
-#'   with the following new fields:
 #' \describe{
 #'   \item{`indx`; renamed using `indx_varname`}{an id field for the new
 #'     aggregated events/intervals; note that where the `date_start` is NA, an
@@ -126,16 +212,76 @@ group_time <- function(x,
                        .forceCopy = FALSE
 ){
 
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # indx <-
-  #   tmp.dateNum <-
-  #   max_date <- min_date <-
-  #   tmp.episode <- tmp.windowEnd <- tmp.windowStart <- tmp.windowCmax <-
-  #   NULL
+  # Checks
+
+  if(missing(x)){
+    stop("x must be supplied as a data.frame or data.table")
+  }
+
+  if (!is.data.frame(x) && !data.table::is.data.table(x)) {
+    stop("'x' must be a data.frame or data.table")
+  }
+
+  if(missing(date_start)){
+    stop("date_start must be supplied as a quoted column name from x")
+  }
+
+  if (!date_start %in% names(x)) stop(paste("Column", date_start, "not found in x"))
+
+  if (!inherits(x[[date_start]], "Date")) stop(paste(date_start, "must be of class Date"))
+
+  if (sum(!is.na(x[[date_start]])) == 0) {
+    warning("No valid rows with non-NA start dates; returning original data.")
+    return(x)
+  }
+
+  if(missing(date_end)){
+
+    if(missing(window_type)){
+      stop("window_type must be specified as either rolling or static")
+    }
+
+    if(!window_type %in% c("rolling", "static")){
+
+     stop("'window_type' must be 'rolling' or 'static'")
+    }
+
+    if(missing(window)){
+      stop("window parameter must be supplied as numeric value, the unit is days")
+    }
+
+    if (!is.numeric(window) || window <= 0) {
+      stop("'window' must be a positive numeric value")
+    }
+  }
+
+  if(!missing(date_end)) {
+
+    if(!date_end %in% names(x)) {
+      stop(paste("Column", date_end, "not found in x"))
+    }
+
+    if (!missing(window) || !missing(window_type)) {
+      warning("date_end is provided so window_type and window are ignored and interval overlap grouping is used.")
+    }
+
+    if (!inherits(x[[date_end]], "Date")) {
+      stop(paste(date_end, "must be of class Date"))
+    }
+  }
+
+
+  if (missing(group_vars) || length(group_vars) == 0) {
+    stop("group_vars must be supplied as a character vector of column names")
+  }
+
+  if (!all(group_vars %in% names(x))) stop("Some group_vars not found in x")
 
   ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(x)) {
+    stop(force_copy_error)
+  }
+
   if(.forceCopy) {
     x <- data.table::copy(x)
   } else {
@@ -146,14 +292,6 @@ group_time <- function(x,
   # subtitute() not needed on other vars as quoted so use get()
   group_vars <- substitute(group_vars)
 
-  ## checks
-  if(missing(x)){
-    stop("x must be supplied as a data.frame or data.table")
-  }
-  if(missing(date_start)){
-    stop("date_start must be supplied as a quoted column name from x")
-  }
-
   ## seperate out the two halfs if there are missing events/intervals
   ## records in y will not be assigned an indx since there is no event
   y <- x[is.na(get(date_start)), ]
@@ -163,15 +301,6 @@ group_time <- function(x,
   ## static + window methods only ##############################################
   ## bring the static window function in so its all a one stop shop for ease
   if(missing(date_end)){
-
-    if(missing(window_type)){
-      stop("window_type must be specified as either rolling or static")
-    }
-
-    if(missing(window)){
-      stop("window parameter must be supplied as numeric value, the unit is days")
-    }
-
     ## this is for static grouping of single date windows
     if(window_type=='static'){
 

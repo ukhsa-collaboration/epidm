@@ -1,24 +1,41 @@
-#' @title HES/SUS Episode Date Cleaning
+#' @title Clean and Impute HES/SUS Episode Start and End Dates
 #'
 #' @description
 #' `r lifecycle::badge('stable')`
 #'
-#'
-#' Correcting for missing end dates on HES/SUS episodes
+#' A utility for cleaning and imputing missing or inconsistent episode end dates
+#' in HES/SUS–style inpatient data. The function identifies missing, invalid,
+#' or overlapping spell dates within patient/provider groups and applies
+#' deterministic rules to correct them. It also assigns a flag (`proxy_missing`)
+#' indicating whether a value was modified and why.
 #'
 #' @import data.table
 #'
-#' @param x a data frame; will be converted to a data.table
-#' @param group_vars a vector containing any variables to be used for
-#'   record grouping, minimum is a patient identifier
-#' @param spell_start_date Inpatient provider spell or episode admission date
-#' @param spell_end_date Inpatient provider spell or episode discharge  date
-#' @param discharge_destination CDS discharge destination code
-#' @param .dropTmp default TRUE; a logical to drop all tmp values used
-#' @param .forceCopy default FALSE; TRUE will force data.table to take a copy
-#'   instead of editing the data without reference
+#' @param x A `data.frame` or `data.table`. Will be converted to a
+#'   `data.table` if not already.
+#' @param group_vars Character vector of grouping variables (e.g., patient ID,
+#'   provider). At least one identifier must be supplied.
+#' @param spell_start_date Name of the column containing the episode or spell
+#'   start date.
+#' @param spell_end_date Name of the column containing the episode or spell
+#'   end date.
+#' @param discharge_destination Name of the column containing the CDS discharge
+#'   destination code.
+#' @param .dropTmp Logical (default `TRUE`). If `TRUE`, temporary processing
+#'   columns are removed before returning the result.
+#' @param .forceCopy Logical (default `FALSE`).
+#'   If `FALSE`, the input is converted to a `data.table` and modified by
+#'   reference.
+#'   If `TRUE`, the input must already be a `data.table`, and the function will
+#'   create an explicit copy to avoid modifying the original object.
 #'
-#' @return a data.table with cleaned start and end dates, and an indicator proxy_missing where the value has changed
+#' @return
+#' A `data.table` containing:
+#'
+#' * Cleaned spell start and end dates.
+#' * A flag variable (`proxy_missing`) indicating whether a date was modified
+#'   and the rule applied (0–4).
+#'
 #' @export
 #'
 #' @examples
@@ -75,19 +92,64 @@ proxy_episode_dates <- function(x,
                                 .forceCopy = FALSE) {
 
 
-  ## convert data.frame to data.table or take a copy
-  if(.forceCopy) {
-    x <- data.table::copy(x)
-  } else {
-    data.table::setDT(x)
+  # Error handling
+
+  if (!data.table::is.data.table(x) && !is.data.frame(x)) {
+    stop("`x` must be a data.frame or data.table.")
   }
 
-  ## Needed to prevent RCMD Check fails
-  ## recommended by data.table
-  ## https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html
-  # proxy_missing <-
-  #   tmp.spell.N <- tmp.spell.n <- tmp.spell_start <- tmp.spell_end <-
-  #   NULL
+  if (!is.logical(.dropTmp) || length(.dropTmp) != 1 || is.na(.dropTmp)) {
+    stop("`.dropTmp` must be a single TRUE/FALSE value.")
+  }
+
+  if (!is.logical(.forceCopy)) {
+    stop("`.forceCopy` must be a single TRUE/FALSE value.")
+  }
+
+  if (!is.character(group_vars) || length(group_vars) < 1 || anyNA(group_vars) || any(!nzchar(group_vars))) {
+    stop("`group_vars` must be a non-empty character vector of column names.")
+  }
+
+  required_cols <- c(group_vars, spell_start_date, spell_end_date, discharge_destination)
+
+  missing_cols <- setdiff(required_cols, names(x))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+
+  if (!is.character(spell_start_date) || length(spell_start_date) != 1 || is.na(spell_start_date) || !nzchar(spell_start_date)) {
+    stop("`spell_start_date` must be a single non-empty character string naming a column.")
+  }
+
+  if (!is.character(spell_end_date) || length(spell_end_date) != 1 || is.na(spell_end_date) || !nzchar(spell_end_date)) {
+    stop("`spell_end_date` must be a single non-empty character string naming a column.")
+  }
+
+  if (!is.character(discharge_destination) || length(discharge_destination) != 1 || is.na(discharge_destination) || !nzchar(discharge_destination)) {
+    stop("`discharge_destination` must be a single non-empty character string naming a column.")
+  }
+
+  if (!inherits(x[[spell_start_date]], "Date") || !inherits(x[[spell_end_date]], "Date")) {
+    stop("Columns for spell start and end dates must be of type Date.")
+  }
+
+  if (nrow(x) == 0) {
+    stop("Input data has zero rows.")
+  }
+
+  if (anyDuplicated(group_vars)) {
+    stop("`group_vars` contains duplicates. Provide unique column names.")
+  }
+
+  ## convert data.frame to data.table or take a copy
+  if (.forceCopy && !data.table::is.data.table(x)) {
+    stop(force_copy_error)
+  }
+
+  if (.forceCopy) {
+    x <- data.table::copy(x)
+  }
+  data.table::setDT(x)
 
   ## just arrange the data
   data.table::setorderv(x,c(eval(group_vars),spell_start_date))
