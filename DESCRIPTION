@@ -29,8 +29,6 @@ Imports:
     stringr,
     utils,
     lubridate,
-    knitr,
-    rmarkdown,
     ggplot2,
     DiagrammeR
 Encoding: UTF-8
