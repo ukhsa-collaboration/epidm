@@ -1,5 +1,47 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# epidm 1.0.6
+
+* This package is now being maintained by the EpiDS team in UKHSA and therefore has moved to the organisation repo and has changes in maintainers.
+
+* Expanded error handling across multiple core functions.
+
+* Improved function parameter validation.
+
+* Various improvements to functions.
+
+* Added tmp.genus to grouping and normalisation of UNNAMED to SP in respeciate_generic function.
+
+* Fixes to link_ae_inpatient function.
+
+* Improved date handling and window logic in group_time function.
+
+* lookup_recode is now exported and fully validated with tests ensuring lookup availability and correct structure.
+
+* Added case‑insensitive file matching along with enhanced error handling and tests in csv_from_zip.
+
+* sql_readwrite / sql_connect: Re factored to support mocking with strengthened connection validation and full simulated‑DB tests.
+
+* Comprehensive tests suites added for all functions.
+
+* Major rewrite and expansion of function documentation across package.
+
+* Added workflow details and vignette. 
+
+* Added warning for incomplete function (hospital_in_out_dates)
+
+* Consistency fixes, including parameter names and descriptions.
+
+* Updated README including logo. 
+
+* Updated DESCRIPTION metadata, additional authors, updated URLs and BugReports.
+
+* R version updates and package version updates.
+
+* Added and refined GitHub Actions.
+
+* Updated pkgdown configuration.
+
 # epidm 1.0.5
 
 * Added ECDS destination_code lookups and use in lookup_recode to show where patients go after A&E attendance.
