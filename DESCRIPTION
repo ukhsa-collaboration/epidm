@@ -28,9 +28,7 @@ Imports:
     stringi,
     stringr,
     utils,
-    lubridate,
-    ggplot2,
-    DiagrammeR
+    lubridate
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
@@ -39,6 +37,7 @@ Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0),
-    patrick
+    patrick,
+    ggplot2
 Config/testthat/edition: 3
 VignetteBuilder: knitr
