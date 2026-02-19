@@ -142,7 +142,7 @@ sql_write <- function(x,
         message(paste('Start data upload',timeStart))
 
         dbWriteTable(conn = odbcConnect,
-                          name = Id(schema = 'dbo',
+                          name = DBI::Id(schema = 'dbo',
                                          table   = tablename),
                           value = x,
                           encoding = 'latin1',
