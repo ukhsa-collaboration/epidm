@@ -56,6 +56,9 @@ an index event date (e.g., a specimen collection date).
 \item{"4"}{Where a patient has a positive test between two hospital stays the most recent completed hospital stay prior to the test is retained except if the time between these events is greater than 14 days, then the first admission following the test is retained}
 }
 }
+\note{
+Work in progress — functionality is incomplete.
+}
 \section{Workflow context}{
 
 Use \code{hospital_in_out_dates()} \strong{after}:
@@ -67,23 +70,6 @@ via \code{lookup_recode()})
 }
 }
 
-\examples{
-\dontrun{
-hospital_in_out_dates(link,
-person_id = 'id',
-hospital = list(
-  org_code = 'organisation_code_of_provider',
-  event_date = 'ev_date',
-  ae_arrive = 'arrival_date',
-  ae_depart = 'departure_date',
-  ae_discharge = 'ecds_discharge',
-  in_spell_start = 'spell_start_date',
-  in_spell_end = 'spell_end_date',
-  in_discharge = 'discharge_destination'
-))[]
-}
-
-}
 \seealso{
 epidm::lookup_recode()
 
