@@ -107,6 +107,10 @@ A `data.table` equal to `data` with additional columns:
   Rank of suitability of the hospital window for the given person/event
   (1 = most suitable).
 
+## Note
+
+Work in progress — functionality is incomplete.
+
 ## Workflow context
 
 Use `hospital_in_out_dates()` **after**:
@@ -127,22 +131,3 @@ epidm::lookup_recode()
 epidm::group_time()
 
 epidm::cip_spells()
-
-## Examples
-
-``` r
-if (FALSE) { # \dontrun{
-hospital_in_out_dates(link,
-person_id = 'id',
-hospital = list(
-  org_code = 'organisation_code_of_provider',
-  event_date = 'ev_date',
-  ae_arrive = 'arrival_date',
-  ae_depart = 'departure_date',
-  ae_discharge = 'ecds_discharge',
-  in_spell_start = 'spell_start_date',
-  in_spell_end = 'spell_end_date',
-  in_discharge = 'discharge_destination'
-))[]
-} # }
-```

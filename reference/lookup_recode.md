@@ -106,16 +106,16 @@ df <- df[order(df$date),]
 df
 #>                              spec                 type       date
 #> 6          ACTINOBACULUM SCHAALII               RECTUM 2025-03-15
-#> 1         PROPIONIBACTERIUM ACNES       SYNOVIAL FLUID 2025-04-29
+#> 1           STREPTOCOCCUS GROUP D       SYNOVIAL FLUID 2025-04-29
 #> 12                 CANDIDA AUREUS    TRACHEAL ASPIRATE 2025-05-21
 #> 9    TETRATHIOBACTER KASHMIRENSIS             DUODENUM 2025-07-29
-#> 2         EUBACTERIUM AEROFACIENS            BRONCHIAL 2025-07-30
+#> 2         PROPIONIBACTERIUM ACNES            BRONCHIAL 2025-07-30
 #> 7       CHRYSEOBACTERIUM MIRICOLA             PERIANAL 2025-08-02
-#> 4            CORYNEBACTERIUM EQUI  LOWER GENITAL TRACT 2025-08-11
-#> 3          ALCALIGENES PIECHAUDII   MIDDLE EAR/MASTOID 2025-08-16
+#> 4          ALCALIGENES PIECHAUDII  LOWER GENITAL TRACT 2025-08-11
+#> 3         EUBACTERIUM AEROFACIENS   MIDDLE EAR/MASTOID 2025-08-16
 #> 10               ESCHERICHIA COLI PUS (SOURCE UNKNOWN) 2025-09-30
 #> 8  LEPTOSPIRA ICTEROHAEMORRHAGIAE                  EMU 2025-11-09
-#> 5     STOMATOCOCCUS MUCILAGINOSUS           BIOPSY-NOS 2026-01-05
+#> 5            CORYNEBACTERIUM EQUI           BIOPSY-NOS 2026-01-05
 #> 11                     SARS-COV-2               SPLEEN 2026-01-23
 
 # check the lookup tables
@@ -132,16 +132,16 @@ df$species <- lookup_recode(df$spec,'species')
 df[,c('spec','species','date')]
 #>                              spec                  species       date
 #> 6          ACTINOBACULUM SCHAALII    ACTINOTIGNUM SCHAALII 2025-03-15
-#> 1         PROPIONIBACTERIUM ACNES      CUTIBACTERIUM ACNES 2025-04-29
+#> 1           STREPTOCOCCUS GROUP D    ENTEROCOCCUS FAECALIS 2025-04-29
 #> 12                 CANDIDA AUREUS           CANDIDA AUREUS 2025-05-21
 #> 9    TETRATHIOBACTER KASHMIRENSIS   ADVENELLA KASHMIRENSIS 2025-07-29
-#> 2         EUBACTERIUM AEROFACIENS  COLLINSELLA AEROFACIENS 2025-07-30
+#> 2         PROPIONIBACTERIUM ACNES      CUTIBACTERIUM ACNES 2025-07-30
 #> 7       CHRYSEOBACTERIUM MIRICOLA ELIZABETHKINGIA MIRICOLA 2025-08-02
-#> 4            CORYNEBACTERIUM EQUI         RHODOCOCCUS EQUI 2025-08-11
-#> 3          ALCALIGENES PIECHAUDII ACHROMOBACTER PIECHAUDII 2025-08-16
+#> 4          ALCALIGENES PIECHAUDII ACHROMOBACTER PIECHAUDII 2025-08-11
+#> 3         EUBACTERIUM AEROFACIENS  COLLINSELLA AEROFACIENS 2025-08-16
 #> 10               ESCHERICHIA COLI         ESCHERICHIA COLI 2025-09-30
 #> 8  LEPTOSPIRA ICTEROHAEMORRHAGIAE   LEPTOSPIRA INTERROGANS 2025-11-09
-#> 5     STOMATOCOCCUS MUCILAGINOSUS      ROTHIA MUCILAGINOSA 2026-01-05
+#> 5            CORYNEBACTERIUM EQUI         RHODOCOCCUS EQUI 2026-01-05
 #> 11                     SARS-COV-2               SARS-COV-2 2026-01-23
 
 head(specimen_type_grouping)
@@ -156,16 +156,16 @@ df$grp <- lookup_recode(df$type,'specimen')
 df[,c('species','type','grp','date')]
 #>                     species                 type                     grp
 #> 6     ACTINOTIGNUM SCHAALII               RECTUM       Faeces & Lowergut
-#> 1       CUTIBACTERIUM ACNES       SYNOVIAL FLUID          Bones & Joints
+#> 1     ENTEROCOCCUS FAECALIS       SYNOVIAL FLUID          Bones & Joints
 #> 12           CANDIDA AUREUS    TRACHEAL ASPIRATE           URT/Mouth/Ear
 #> 9    ADVENELLA KASHMIRENSIS             DUODENUM       Faeces & Lowergut
-#> 2   COLLINSELLA AEROFACIENS            BRONCHIAL Lower Respiratory Tract
+#> 2       CUTIBACTERIUM ACNES            BRONCHIAL Lower Respiratory Tract
 #> 7  ELIZABETHKINGIA MIRICOLA             PERIANAL       Faeces & Lowergut
-#> 4          RHODOCOCCUS EQUI  LOWER GENITAL TRACT                 Genital
-#> 3  ACHROMOBACTER PIECHAUDII   MIDDLE EAR/MASTOID           URT/Mouth/Ear
+#> 4  ACHROMOBACTER PIECHAUDII  LOWER GENITAL TRACT                 Genital
+#> 3   COLLINSELLA AEROFACIENS   MIDDLE EAR/MASTOID           URT/Mouth/Ear
 #> 10         ESCHERICHIA COLI PUS (SOURCE UNKNOWN)                  Fluids
 #> 8    LEPTOSPIRA INTERROGANS                  EMU            Urine/Kidney
-#> 5       ROTHIA MUCILAGINOSA           BIOPSY-NOS           Swabs-General
+#> 5          RHODOCOCCUS EQUI           BIOPSY-NOS           Swabs-General
 #> 11               SARS-COV-2               SPLEEN                 Tissues
 #>          date
 #> 6  2025-03-15
