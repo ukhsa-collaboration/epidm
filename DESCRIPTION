@@ -39,6 +39,8 @@ Suggests:
     rmarkdown,
     testthat (>= 3.0.0),
     patrick,
-    ggplot2
+    ggplot2,
+    dplyr,
+    tibble
 Config/testthat/edition: 3
 VignetteBuilder: knitr
