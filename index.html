@@ -64,8 +64,60 @@
   </div>
 </nav><div class="container template-home">
 <div class="row">
-  <main id="main" class="col-md-9">
-Contains utilities and functions for the cleaning, processing and management of patient level public health data for surveillance and analysis held by the UK Health Security Agency, UKHSA.
+  <main id="main" class="col-md-9"><div class="section level1">
+<div class="page-header">
+<img src="logo.png" class="logo" alt=""><h1 id="epidm-">epidm <a class="anchor" aria-label="anchor" href="#epidm-"></a>
+</h1>
+</div>
+<!-- badges: start -->
+
+<p><code>epidm</code> provides standard methods for the management and transformation of UK Public Health data in R</p>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<p>epiviz can be installed from GitHub using the following code:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Install epidm</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">'ukhsa-collaboration/epidm'</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># To install the development version</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"ukhsa-collaboration/epidm@dev"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="purpose">Purpose<a class="anchor" aria-label="anchor" href="#purpose"></a>
+</h2>
+<p>The <code>epidm</code> package has been developed to share standard methods for the processing of epidemiological data in the UK. Key data assets this focuses on include</p>
+<div class="section level3">
+<h3 id="infection-data">Infection data<a class="anchor" aria-label="anchor" href="#infection-data"></a>
+</h3>
+<p>The Second Generation Surveillance System (SGSS) is a data asset held by the <a href="https://www.gov.uk/government/publications/securing-our-health-the-uk-health-security-agency/securing-our-health-the-uk-health-security-agency" class="external-link">UK Health Security Agency</a> (formerly Public Health England) which routinely and automatically collects laboratory data from across England.</p>
+<p>Laboratories return data on organisms isolated from samples such as the organism species, specimen type, sampling date and antimicrobial susceptibility testing results. These data are routinely used for public health surveillance and epidemiology in England.</p>
+</div>
+<div class="section level3">
+<h3 id="hospital-data">Hospital data<a class="anchor" aria-label="anchor" href="#hospital-data"></a>
+</h3>
+<p>The functions for dealing with hospital data within <code>epidm</code> are designed to help clean, process, and link the hospital in a meaningful way. These methods have been used to help understand <a href="https://www.medrxiv.org/content/10.1101/2021.02.16.21251625v1" class="external-link">Healthcare Associated COVID-19 in England</a>.</p>
+<div class="section level4">
+<h4 id="emergency-care-data-set-ecds">
+<a href="https://digital.nhs.uk/data-and-information/data-collections-and-data-sets/data-sets/emergency-care-data-set-ecds" class="external-link">Emergency Care Data Set (ECDS)</a><a class="anchor" aria-label="anchor" href="#emergency-care-data-set-ecds"></a>
+</h4>
+<p>ECDS is the national data set for urgent and emergency care and is reported daily by NHS Trusts.</p>
+</div>
+<div class="section level4">
+<h4 id="secondary-use-services-sus">
+<a href="https://digital.nhs.uk/services/secondary-uses-service-sus" class="external-link">Secondary Use Services (SUS)</a><a class="anchor" aria-label="anchor" href="#secondary-use-services-sus"></a>
+</h4>
+<p>SUS is the single, comprehensive repository for healthcare data in England which enables a range of reporting and analyses to support the NHS in the delivery of healthcare services. SUS is reported monthly, by the 21st of each month for the previous months data.</p>
+</div>
+<div class="section level4">
+<h4 id="hospital-episode-statistics-hes">
+<a href="https://digital.nhs.uk/data-and-information/data-tools-and-services/data-services/hospital-episode-statistics" class="external-link">Hospital Episode Statistics (HES)</a><a class="anchor" aria-label="anchor" href="#hospital-episode-statistics-hes"></a>
+</h4>
+<p>HES is a data warehouse containing details of all admissions, outpatient appointments and A and E attendances at NHS hospitals in England. Hes is reported quarterly, and is a ‘cleaned’ version of SUS and ECDS.</p>
+</div>
+</div>
+</div>
+</div>
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
@@ -102,7 +154,13 @@ Contains utilities and functions for the cleaning, processing and management of 
 </ul>
 </div>
 
-
+<div class="dev-status">
+<h2 data-toc-skip>Dev status</h2>
+<ul class="list-unstyled">
+<li><a href="https://lifecycle.r-lib.org/articles/stages.html#stable" class="external-link"><img src="https://img.shields.io/badge/lifecycle-stable-green.svg" alt="Lifecycle: stable"></a></li>
+<li><a href="https://github.com/ukhsa-collaboration/epidm/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/ukhsa-collaboration/epidm/actions/workflows/R-CMD-check.yaml/badge.svg?branch=master" alt="R-CMD-check"></a></li>
+</ul>
+</div>
 
   </aside>
 </div>
